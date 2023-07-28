@@ -5,6 +5,8 @@ import pickle as pkl
 import numpy as np
 from matplotlib import pyplot as plt
 
+import quimb.tensor as qtn
+
 from tsp import apply_unitary_layers_on_wfn
 from tsp_sequ import generate_sequ_for_mps
 from tsp_lcu import generate_lcu_for_mps
@@ -27,9 +29,18 @@ if __name__ == "__main__":
 
     qubit_hamiltonian = 0
     preparation_method = 'LCU'#'SeqU'#
-    mps_type = 'P4'#'heisenberg'#'N2'#
+    mps_type = 'random'#'P4'#'heisenberg'#'N2'#
     
     data_dict = {}
+    if mps_type == 'random':
+        
+        params = [0]
+        data = {}
+        data['quimb_mps'] = qtn.MPS_rand_state(L=16, bond_dim=4)
+        data['qubit_hamiltonian'] = 0
+        data_dict[0] = data
+        
+    
     if mps_type == 'P4':
         params = [1.9, 2, 2.1]
         for param in params:
@@ -60,7 +71,7 @@ if __name__ == "__main__":
     L = target_mps.L
     
     
-    for preparation_method in ['LCU+autodiff']:#['SeqU', 'SeqU+autodiff', 'LCU', 'LCU+autodiff']:
+    for preparation_method in ['LCU+autodiff']:#['SeqU']:#['LCU+autodiff']:#['SeqU', 'SeqU+autodiff', 'LCU', 'LCU+autodiff']:
         
         if preparation_method=='SeqU':
             italic_D_sequ = 24
@@ -119,7 +130,9 @@ if __name__ == "__main__":
             quimb_overlap = norm_mps_ovrlap(encoded_mps, target_mps)
             print('LCU - overlap:', preparation_data['overlaps'][-1],  quimb_overlap - preparation_data['overlaps'][-1] )
             
-            lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps)
+            # lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps)
+            
+            pkl.dump([target_mps, kappas, lcu_mps], open('temp_dump.pkl', "wb"))
             
             # plt.plot([1+overlap.numpy() for overlap in overlaps_list], '.-b')
             # plt.yscale('log')
@@ -157,4 +170,4 @@ if __name__ == "__main__":
         # plt.yscale('log')
         
         # plt.plot(x, np.real(x)*0+1.58, 'k-')
-    plt.tight_layout()
+    # plt.tight_layout()

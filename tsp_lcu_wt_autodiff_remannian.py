@@ -271,4 +271,7 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
     
     
 if __name__ == "__main__":
-    pass 
+    with open('temp_dump.pkl', 'rb') as f:
+        [target_mps, kappas, lcu_mps] = pkl.load(f)
+        
+    lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps)
