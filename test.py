@@ -28,15 +28,49 @@ if __name__ == "__main__":
     overlaps_gap = 4
 
     qubit_hamiltonian = 0
-    preparation_method = 'LCU'#'SeqU'#
-    mps_type = 'random'#'P4'#'heisenberg'#'N2'#
+    preparation_method = 'SeqU'#'LCU'#
+    mps_type = 'aklt'#''random'#'random'#'P4'#'heisenberg'#'N2'#
     
     data_dict = {}
-    if mps_type == 'random':
+    if mps_type == 'aklt':
+        
+        from adiabatic_time_evolution import make_1d_aklt_tensor
+        Q_aklt = make_1d_aklt_tensor()
+
+        ten = qtn.Tensor(Q_aklt.reshape((2,2, 2,2)), inds=('vl','vr','pl','pr') )
+        tn = ten.split(('vl','pl'), bond_ind='v0')
+        ten0, ten1 = tn.tensor_map[0], tn.tensor_map[1]
+        ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
+        ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
+        
+        ten0 = np.array(ten0.data, dtype=np.float64)
+        ten1 = np.array(ten1.data, dtype=np.float64)
+        
+        L=16
+        cyclic = False
+        Qs = []
+        for _ in range(L):
+            Qs.append(ten0)
+            Qs.append(ten1)
+        
+        if not cyclic:
+            Qs[ 0] = np.squeeze(Qs[ 0][0, :, :])
+            Qs[-1] = np.squeeze(Qs[-1][:, 0, :])
+        mps = qtn.MatrixProductState(Qs, shape='lrp')
         
         params = [0]
         data = {}
-        data['quimb_mps'] = qtn.MPS_rand_state(L=16, bond_dim=4)
+        data['quimb_mps'] = mps
+        data['qubit_hamiltonian'] = 0
+        data_dict[0] = data
+        
+    
+    if mps_type == 'random':
+        params = [0]
+        data = {}
+        data['quimb_mps'] = (qtn.MPS_rand_state(L=16, bond_dim=4) + 
+                             qtn.MPS_rand_state(L=16, bond_dim=4)*0*1j)
+        
         data['qubit_hamiltonian'] = 0
         data_dict[0] = data
         
@@ -71,11 +105,11 @@ if __name__ == "__main__":
     L = target_mps.L
     
     
-    for preparation_method in ['LCU+autodiff']:#['SeqU']:#['LCU+autodiff']:#['SeqU', 'SeqU+autodiff', 'LCU', 'LCU+autodiff']:
+    for preparation_method in ['LCU+autodiff']:#['SeqU']:#['SeqU+autodiff']:#['LCU+autodiff']:#['SeqU', 'SeqU+autodiff', 'LCU', 'LCU+autodiff']:
         
         if preparation_method=='SeqU':
             italic_D_sequ = 24
-            preparation_data = generate_sequ_for_mps(target_mps, qubit_hamiltonian, italic_D_sequ, do_compression=False, verbose=False)
+            preparation_data = generate_sequ_for_mps(target_mps, qubit_hamiltonian, italic_D_sequ, do_compression=True, max_bond_dim=64, verbose=False)
             unitaries = preparation_data['unitaries']
             
             encoded_mps = apply_unitary_layers_on_wfn(unitaries, cl_zero_mps(L))
@@ -94,6 +128,8 @@ if __name__ == "__main__":
             quimb_overlap = norm_mps_ovrlap(encoded_mps, target_mps)
             print('SeqU - overlaps:',  preparation_data['overlaps'][-1], quimb_overlap - preparation_data['overlaps'][-1] )
             
+            # from untitled1 import sequ_unitary_circuit_optimization 
+            # sequ_unitary_circuit_optimization(target_mps, unitaries)
             optimized_unitary = sequ_unitary_circuit_optimization(target_mps, unitaries)
             
 
