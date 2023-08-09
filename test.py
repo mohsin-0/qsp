@@ -17,13 +17,9 @@ from utils import (norm_mps_ovrlap, cl_zero_mps, compute_energy_expval)
 
 
 if __name__ == "__main__":
-    # TODO
-    # su(2)+Other symmetries aware preparation
-    # preparing PEPS
-    # circuit for MPS w/ low variance
-    # QCTN 
-    # Parametrized auto Autodiff 
-    # Input and format of the MPS - should be some framework agnostic
+    # TODO: QCTN
+    # TODO: Parametrized auto Autodiff 
+    # TODO: Input and format of the MPS - should be some framework agnostic
     
     overlaps_gap = 4
 
