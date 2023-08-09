@@ -100,7 +100,7 @@ def make_hamiltonian_mpo(L, ham_term, cyclic, compress=False):
         H_mpo.compress(cutoff=1e-12, cutoff_mode="rel" if cyclic else "sum2")
         
     
-    evo_op = sp.linalg.expm(ham_term.reshape(16,16)*tau*-1j).reshape((4,4,4,4))
+    evo_op = sp.linalg.expm(ham_term.reshape(16,16)*-1j*tau/2).reshape((4,4,4,4))
     u,s,v = sp.linalg.svd(evo_op.transpose([0,2,1,3]).reshape(16,16))
     v = np.diag(s)@v
     
@@ -127,7 +127,10 @@ def make_hamiltonian_mpo(L, ham_term, cyclic, compress=False):
     mpo_tens[-1] = mpo_n
     
     mpo_2 = qtn.MatrixProductOperator(mpo_tens, 'lrdu')
-        
+    
+    mpo_1.compress(cutoff=1e-12, cutoff_mode="rel" if cyclic else "sum2")
+    mpo_2.compress(cutoff=1e-12, cutoff_mode="rel" if cyclic else "sum2")
+    
     return H_mpo, H_local_ham1D, mpo_1, mpo_2
 
 def constuct_parent_hamiltonian(L, Q, cyclic=False):
@@ -208,7 +211,7 @@ def make_1d_aklt_tensor():
 
 if __name__ == "__main__":    
 
-    L = 64
+    L = 8
     cyclic = False
     
     # gaps_all = []
@@ -264,7 +267,7 @@ if __name__ == "__main__":
     mps_aklt = make_mps_from_Q(L, Q_aklt, cyclic=cyclic)
     mps_aklt = mps_aklt/np.abs(np.sqrt( (mps_aklt.H & mps_aklt)^all ))
     
-    T, tau = 40, 0.02
+    T, tau = 10, 0.02
     # s_func = lambda t,T=T: sin( half_pi*sin(half_pi*t/T)**2 )**2
     s_func = lambda t,T=T: sin(half_pi*t/T)**2
     # s_func = lambda t,T=T: t/T
@@ -302,12 +305,15 @@ if __name__ == "__main__":
             # psi.compress(max_bond=1)
             
         psi = mpo_1.apply(psi)
-        psi.compress('right', max_bond=4)
+        psi.compress()  
+
+        # psi.compress(max_bond=2)
+        
+        psi = mpo_2.apply(psi)
+        psi.compress()  
+        
         psi.right_canonize(normalize=True)
-        
-        
-        # psi = mpo_2.apply(psi)
-        # psi.compress(16)        
+        psi.show()
         
         norm_psi = np.sqrt((psi.H & psi)^all)
             
