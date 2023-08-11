@@ -85,53 +85,98 @@ def build_aklt_hamiltonian_1d_mpo(theta, L, cyclic=False, compress=True):
     return H_mpo
 
 
-def make_hamiltonian_mpo(L, ham_term, cyclic, compress=False):
-    u,s,v = sp.linalg.svd(ham_term.transpose([0,2,1,3]).reshape(16,16))
-    
+def make_hamiltonian_mpo(L, ham_term, ham_term_0, ham_term_n, cyclic, compress=False):
     H = qtn.SpinHam1D(S=3/2, cyclic=cyclic)
-    for it in range(s.shape[0]):
-        if np.abs(s[it])>1e-12:
-            H += s[it], qu.qu(u[:,it].reshape(4,4)), qu.qu(v[it,:].reshape(4,4))
+    
+    for site_indx in range((L-1)):
+        if site_indx==0:
+            u,s,v = sp.linalg.svd(ham_term_0.transpose([0,2,1,3]).reshape(16,16))
+            
+        elif site_indx==(L-1-1):
+            u,s,v = sp.linalg.svd(ham_term_n.transpose([0,2,1,3]).reshape(16,16))
+            
+        else:
+            u,s,v = sp.linalg.svd(ham_term.transpose([0,2,1,3]).reshape(16,16))
+            
+        for it in range(s.shape[0]):
+            if np.abs(s[it])>1e-12:
+                H[site_indx, site_indx+1] += s[it], qu.qu(u[:,it].reshape(4,4)), qu.qu(v[it,:].reshape(4,4))
+    
     
     H_local_ham1D = H.build_local_ham(L)
-    
     H_mpo = H.build_mpo(L, )
     if compress is True:
         H_mpo.compress(cutoff=1e-12, cutoff_mode="rel" if cyclic else "sum2")
+    
+    return H_mpo, H_local_ham1D
+
+
+def make_evolution_mpo(L, ham_term, ham_term_0, ham_term_n, cyclic, compress=False):
+    hamiltonian = [ham_term]*(L-1)
+    hamiltonian[0] = ham_term_0
+    hamiltonian[L-2] = ham_term_n
+    
+    
+    # mpo for applying gates from left to right
+    mpo_tens = [[] for _ in range(L)]    
+    for site_indx in range((L-1)):  # run over all the interactions
+        evo_op = sp.linalg.expm(hamiltonian[site_indx].reshape(16,16)*-1j*tau/2*T).reshape((4,4,4,4))
+        u,s,v = sp.linalg.svd(evo_op.transpose([0,2,1,3]).reshape(16,16))
+        v = np.diag(s)@v
+        
+        u = u.reshape(4,4,-1)
+        v = v.reshape((-1,4,4))
+        
+        mpo_tens[site_indx].append(u)   
+        mpo_tens[site_indx+1].append(v) # first comes v and then u
+
+
+    for indx in range(L):   # run over all the sites
+        if indx==0:
+            mpo_tens[0] = mpo_tens[0][0].transpose((2,0,1))
+            
+        elif indx==(L-1):
+            mpo_tens[L-1] = mpo_tens[L-1][0]
+            
+        else:
+            v,u = mpo_tens[indx][0], mpo_tens[indx][1] 
+            mpo_tens[indx] = ncon((v,u),([-1, -3, 1],[1,-4,-2]))
+            
+    mpo_1 = qtn.MatrixProductOperator(mpo_tens, 'lrdu')    
         
     
-    evo_op = sp.linalg.expm(ham_term.reshape(16,16)*-1j*tau/2).reshape((4,4,4,4))
-    u,s,v = sp.linalg.svd(evo_op.transpose([0,2,1,3]).reshape(16,16))
-    v = np.diag(s)@v
+    # mpo for applying gates from right to left
+    mpo_tens = [[] for _ in range(L)]    
+    for site_indx in reversed(range((L-1))):  # run over all the interactions
+        evo_op = sp.linalg.expm(hamiltonian[site_indx].reshape(16,16)*-1j*tau/2*T).reshape((4,4,4,4))
+        u,s,v = sp.linalg.svd(evo_op.transpose([0,2,1,3]).reshape(16,16))
+        v = np.diag(s)@v
+        
+        u = u.reshape(4,4,-1)
+        v = v.reshape((-1,4,4))
+        
+        mpo_tens[site_indx].append(u)   # first comes u and then u
+        mpo_tens[site_indx+1].append(v) 
     
-    u = u.reshape(4,4,-1)
-    v = v.reshape((-1,4,4))
     
-    ###############
-    mpo_i = ncon((v,u),([-1, -3, 1],[1,-4,-2]))
-    mpo_0 = u.transpose((2,0,1))
-    mpo_n = v
-    
-    mpo_tens = [mpo_i]*L
-    mpo_tens[ 0] = mpo_0
-    mpo_tens[-1] = mpo_n
-    
-    mpo_1 = qtn.MatrixProductOperator(mpo_tens, 'lrdu')
-    ###############
-    mpo_i = ncon((u,v),([-3, 1, -2],[-1, 1,-4]))
-    mpo_0 = u.transpose((2,0,1))
-    mpo_n = v
-    
-    mpo_tens = [mpo_i]*L
-    mpo_tens[ 0] = mpo_0
-    mpo_tens[-1] = mpo_n
-    
+    for indx in range(L):   # run over all the sites
+        if indx==0:
+            mpo_tens[0] = mpo_tens[0][0].transpose((2,0,1))
+            
+        elif indx==(L-1):
+            mpo_tens[L-1] = mpo_tens[L-1][0]
+            
+        else:
+            u,v = mpo_tens[indx][0], mpo_tens[indx][1] 
+            mpo_tens[indx] = ncon((u,v),([-3, 1, -2],[-1, 1,-4]))
+            
     mpo_2 = qtn.MatrixProductOperator(mpo_tens, 'lrdu')
-    
+        
     mpo_1.compress(cutoff=1e-12, cutoff_mode="rel" if cyclic else "sum2")
     mpo_2.compress(cutoff=1e-12, cutoff_mode="rel" if cyclic else "sum2")
     
-    return H_mpo, H_local_ham1D, mpo_1, mpo_2
+    return mpo_1, mpo_2
+
 
 def constuct_parent_hamiltonian(L, Q, cyclic=False):
     kernel = sp.linalg.null_space(ncon([Q,Q],[(-1,1,-3),(1,-2,-4)]).reshape(4,4**2))
@@ -140,16 +185,31 @@ def constuct_parent_hamiltonian(L, Q, cyclic=False):
         v = kernel[:,it]
         ham_term += ncon((np.conj(v),v),([-1],[-2]))    
     ham_term = ham_term.reshape((4,4,4,4))
-   
+    
+    
+    Q_0 = (Q[0:1, :, :])
+    Q_n = (Q[:, 0:1, :])
+    
+    kernel = sp.linalg.null_space(ncon([Q_0,Q],[(-1,1,-3),(1,-2,-4)]).reshape(2,4**2))
+    ham_term_0 = 0.    
+    for it in range(kernel.shape[1]):
+        v = kernel[:,it]
+        ham_term_0 += ncon((np.conj(v),v),([-1],[-2]))    
+    ham_term_0 = ham_term_0.reshape((4,4,4,4))
+    
+    kernel = sp.linalg.null_space(ncon([Q,Q_n],[(-1,1,-3),(1,-2,-4)]).reshape(2,4**2))
+    ham_term_n = 0.    
+    for it in range(kernel.shape[1]):
+        v = kernel[:,it]
+        ham_term_n += ncon((np.conj(v),v),([-1],[-2]))    
+    ham_term_n = ham_term_n.reshape((4,4,4,4))
+    
     if not cyclic:
         H = [qtn.Tensor(ham_term, inds=(f'k{i}',f'k{i+1}', f'b{i}',f'b{i+1}')) for i in range(L-1)]
+        H[ 0] = qtn.Tensor(ham_term_0, inds=(f'k{0}',f'k{1}', f'b{0}',f'b{1}'))
+        H[-1] = qtn.Tensor(ham_term_n, inds=(f'k{L-2}',f'k{L-1}', f'b{L-2}',f'b{L-1}')) 
         
-    if cyclic:
-        H = [qtn.Tensor(ham_term, inds=(f'k{i}',f'k{np.mod(i+1,L)}', f'b{i}',f'b{np.mod(i+1,L)}'))  for i in range(L)]
-    
-    H_mpo, H_local_ham1D, mpo_1, mpo_2 = make_hamiltonian_mpo(L, ham_term, cyclic, compress=False)
-        
-    return H, H_mpo, H_local_ham1D, mpo_1, mpo_2
+    return H, ham_term, ham_term_0, ham_term_n
     
 
 def calculate_energy_from_parent_hamiltonian(L, mps, H):
@@ -211,7 +271,7 @@ def make_1d_aklt_tensor():
 
 if __name__ == "__main__":    
 
-    L = 8
+    L = 32
     cyclic = False
     
     # gaps_all = []
@@ -267,9 +327,9 @@ if __name__ == "__main__":
     mps_aklt = make_mps_from_Q(L, Q_aklt, cyclic=cyclic)
     mps_aklt = mps_aklt/np.abs(np.sqrt( (mps_aklt.H & mps_aklt)^all ))
     
-    T, tau = 10, 0.02
-    # s_func = lambda t,T=T: sin( half_pi*sin(half_pi*t/T)**2 )**2
-    s_func = lambda t,T=T: sin(half_pi*t/T)**2
+    T, tau = 6, 0.04
+    s_func = lambda t,T=T: sin( half_pi*sin(half_pi*t/T)**2 )**2
+    # s_func = lambda t,T=T: sin(half_pi*t/T)**2
     # s_func = lambda t,T=T: t/T
     
     ts = np.arange(0, T+tau, tau)
@@ -283,8 +343,13 @@ if __name__ == "__main__":
         s = s_func(t)
         Q = (1 - s)*I + s*Q_aklt
         
-        H, H_mpo, H_local_ham1D, mpo_1, mpo_2 = constuct_parent_hamiltonian(L, Q, cyclic=cyclic)
+        H, ham_term, ham_term_0, ham_term_n = constuct_parent_hamiltonian(L, Q, cyclic=cyclic)
+        H_mpo, H_local_ham1D = make_hamiltonian_mpo(L, ham_term, ham_term_0, ham_term_n, cyclic, compress=False)
+        
+        mpo_1, mpo_2 = make_evolution_mpo(L, ham_term, ham_term_0, ham_term_n, cyclic, compress=False)
+        
         mps = make_mps_from_Q(L, Q, cyclic=cyclic)
+        
         norm_mps = np.sqrt((mps.H & mps)^all)
         
         # energy = calculate_energy_from_parent_hamiltonian(L, mps, H)
@@ -292,29 +357,15 @@ if __name__ == "__main__":
         print(f"{t=:.2f}, {s=:.4f}, {np.abs(energy)=}") 
                 
         if t_it==0:
-            # A = np.zeros((2,2,4), dtype=np.complex128)
-            # A[0,0,0] = 1
-            # A[1,1,1] = 1
-            # tens= [A]*L
-            # tens[ 0] = A[0,:,:]
-            # tens[-1] = A[:,0,:]
-            # psi = qtn.MatrixProductState(tens,shape='lrp')
-            
             psi = mps.copy()
-            psi.canonize
-            # psi.compress(max_bond=1)
             
         psi = mpo_1.apply(psi)
-        psi.compress()  
+        psi.compress(max_bond=2)  
 
-        # psi.compress(max_bond=2)
-        
         psi = mpo_2.apply(psi)
-        psi.compress()  
+        psi.compress(max_bond=2)  
         
         psi.right_canonize(normalize=True)
-        psi.show()
-        
         norm_psi = np.sqrt((psi.H & psi)^all)
             
         # tebd = qtn.TEBD(psi, H_local_ham1D)

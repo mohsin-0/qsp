@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import pickle as pkl
 import numpy as np
@@ -85,21 +87,6 @@ def build_aklt_hamiltonian_1d_mpo(theta, L, cyclic=False, compress=True):
     return H_mpo
 
 
-def make_hamiltonian_mpo(L, ham_term, cyclic, compress=False):
-    u,s,v = sp.linalg.svd(ham_term.transpose([0,2,1,3]).reshape(16,16))
-    
-    H = qtn.SpinHam1D(S=3/2, cyclic=cyclic)
-    for it in range(s.shape[0]):
-        if np.abs(s[it])>1e-12:
-            H += s[it], qu.qu(u[:,it].reshape(4,4)), qu.qu(v[it,:].reshape(4,4))
-    
-    H_local_ham1D = H.build_local_ham(L)
-    
-    H_mpo = H.build_mpo(L, )
-    if compress is True:
-        H_mpo.compress(cutoff=1e-12, cutoff_mode="rel" if cyclic else "sum2")
-        
-    return H_mpo, H_local_ham1D
 
 def constuct_parent_hamiltonian(L, Q, cyclic=False):
     kernel = sp.linalg.null_space(ncon([Q,Q],[(-1,1,-3),(1,-2,-4)]).reshape(4,4**2))
@@ -108,32 +95,32 @@ def constuct_parent_hamiltonian(L, Q, cyclic=False):
         v = kernel[:,it]
         ham_term += ncon((np.conj(v),v),([-1],[-2]))    
     ham_term = ham_term.reshape((4,4,4,4))
-   
+    
+    
+    Q_0 = (Q[0:1, :, :])
+    Q_n = (Q[:, 0:1, :])
+    
+    kernel = sp.linalg.null_space(ncon([Q_0,Q],[(-1,1,-3),(1,-2,-4)]).reshape(2,4**2))
+    ham_term_0 = 0.    
+    for it in range(kernel.shape[1]):
+        v = kernel[:,it]
+        ham_term_0 += ncon((np.conj(v),v),([-1],[-2]))    
+    ham_term_0 = ham_term_0.reshape((4,4,4,4))
+    
+    kernel = sp.linalg.null_space(ncon([Q,Q_n],[(-1,1,-3),(1,-2,-4)]).reshape(2,4**2))
+    ham_term_n = 0.    
+    for it in range(kernel.shape[1]):
+        v = kernel[:,it]
+        ham_term_n += ncon((np.conj(v),v),([-1],[-2]))    
+    ham_term_n = ham_term_n.reshape((4,4,4,4))
+    
     if not cyclic:
         H = [qtn.Tensor(ham_term, inds=(f'k{i}',f'k{i+1}', f'b{i}',f'b{i+1}')) for i in range(L-1)]
+        H[ 0] = qtn.Tensor(ham_term_0, inds=(f'k{0}',f'k{1}', f'b{0}',f'b{1}'))
+        H[-1] = qtn.Tensor(ham_term_n, inds=(f'k{L-2}',f'k{L-1}', f'b{L-2}',f'b{L-1}')) 
         
-    if cyclic:
-        H = [qtn.Tensor(ham_term, inds=(f'k{i}',f'k{np.mod(i+1,L)}', f'b{i}',f'b{np.mod(i+1,L)}'))  for i in range(L)]
+    return H, ham_term, ham_term_0, ham_term_n
     
-    H_mpo, H_local_ham1D = make_hamiltonian_mpo(L, ham_term, cyclic, compress=False)
-    
-    return H, H_mpo, H_local_ham1D
-    
-
-def calculate_energy_from_parent_hamiltonian(L, mps, H):
-    energy = 0.
-    for i in range(L-1):
-        mps_adj = mps.reindex({f'k{indx}':f'b{indx}' for indx in set([int(indx[1:]) for indx in H[i].inds])}).H
-        energy += ((mps_adj & H[i] & mps )^all)/((mps.H & mps)^all)        
-    return energy
-
-
-def calculate_energy_from_parent_hamiltonian_mpo(mps, H_mpo):
-    mps_adj = mps.H
-    mps_adj.align_(H_mpo, mps_adj)
-    exp_val = ((mps_adj & H_mpo & mps)^all)/((mps.H & mps)^all)   
-    return exp_val
-
 
 def make_mps_from_Q(L, Q, cyclic=False):
     Qs = [Q] * L
@@ -142,6 +129,8 @@ def make_mps_from_Q(L, Q, cyclic=False):
         Qs[-1] = np.squeeze(Qs[-1][:, 0, :])
         
     mps = qtn.MatrixProductState(Qs, shape='lrp')
+    mps = (mps^all).transpose(*('k0','k1','k2','k3','k4')).data.reshape(4**L)
+    
     return mps
 
 
@@ -179,7 +168,7 @@ def make_1d_aklt_tensor():
 
 if __name__ == "__main__":    
 
-    L = 16
+    L = 5
     cyclic = False
     
     # gaps_all = []
@@ -233,73 +222,62 @@ if __name__ == "__main__":
     Q_aklt = make_1d_aklt_tensor()
     
     mps_aklt = make_mps_from_Q(L, Q_aklt, cyclic=cyclic)
-    mps_aklt = mps_aklt/np.abs(np.sqrt( (mps_aklt.H & mps_aklt)^all ))
     
-    T, tau = 160, 0.04
+    T, tau = 10, 0.02
     # s_func = lambda t,T=T: sin( half_pi*sin(half_pi*t/T)**2 )**2
-    s_func = lambda t,T=T: sin(half_pi*t/T)**2
-    # s_func = lambda t,T=T: t/T
+    # s_func = lambda t,T=T: sin(half_pi*t/T)**2
+    s_func = lambda t,T=T: t/T
     
     ts = np.arange(0, T+tau, tau)
+    ss= [s_func(t) for t in ts]
     
     x = np.array(ts)
     fidelity_target  = np.zeros(len(ts)) + np.nan
-    fidelity_current = np.zeros(len(ts)) + np.nan 
+    fidelity_current = np.zeros(len(ts)) + np.nan
         
     I = np.eye(4).reshape(2,2,4)
-    
+    gap = 1.0
     for t_it, t in enumerate(ts):
-        s = 0.124#s_func(t)
+        s = ss[t_it]
         Q = (1 - s)*I + s*Q_aklt
         
-        H, H_mpo, H_local_ham1D = constuct_parent_hamiltonian(L, Q, cyclic=cyclic)
+        H, ham_term, ham_term_0, ham_term_n = constuct_parent_hamiltonian(L, Q, cyclic=cyclic)
         mps = make_mps_from_Q(L, Q, cyclic=cyclic)
-        norm_mps = np.sqrt((mps.H & mps)^all)
+        mps = mps/np.sqrt(np.conj(mps)@mps)
         
-        # energy = calculate_energy_from_parent_hamiltonian(L, mps, H)
-        energy = calculate_energy_from_parent_hamiltonian_mpo(mps, H_mpo)
-        print(f"{t=:.2f}, {s=:.4f}, {np.abs(energy)=}") 
-        
-        
-        if t_it==0:
-            psi = mps
+        ###########
+        if t_it == 0: 
+            psi =mps 
+            continue
             
-        tebd = qtn.TEBD(psi, H_local_ham1D)
-        # tebd.split_opts['cutoff'] = 1e-12
+        I4 = np.eye(4)
+        from numpy import kron as kr
+        h = ham_term.reshape(16,16)
+        h_0 = ham_term_0.reshape(16,16)
+        h_n = ham_term_n.reshape(16,16)
         
-        for psi_it in tebd.at_times([tau], tol=1e-12):
-            psi = psi_it
-            
-        norm_psi = np.sqrt((psi.H & psi)^all)
-        energy = calculate_energy_from_parent_hamiltonian_mpo(psi, H_mpo)
-        print(f"{t=:.2f}, {s=:.4f}, {np.abs(energy)=}\n") 
-        
-        fidelity_target[t_it]  = np.abs( ((mps_aklt.H & psi)^all)/(norm_psi) )
-        fidelity_current[t_it] = np.abs( ((mps.H & psi)^all)/(norm_mps*norm_psi) )
-        print(f"{t=:.2f}, {s=:.4f}, \n{np.abs(energy)=}, \n{fidelity_target[t_it]=}, \n{fidelity_current[t_it]=}")
-        print("")
-        # plt.plot(ts, fidelity_current, '.-')
-        # plt.pause(0.05)
-
-        # ###### sanity check for the parent hamiltonian only for L=5
-        # I4 = qu.eye(4)
-        # term = qu.qu(H[2].data).reshape((16,16))
-        # H_full = ((term & I4 & I4 & I4) + 
-        #           (I4 & term & I4 & I4) + 
-        #           (I4 & I4 & term & I4) + 
-        #           (I4 & I4 & I4 & term))
+        H_mpo = (kr(kr(kr(h_0, I4), I4), I4) + 
+                       kr(kr(kr( I4,  h), I4), I4) + 
+                       kr(kr(kr( I4, I4),  h), I4) + 
+                       kr(kr(kr( I4, I4), I4), h_n))
+        expm = sp.linalg.expm(-H_mpo*1j* tau*T )
     
-        # ## make it cyclic
-        # if cyclic:
-        #     I4 = np.array(I4)
-        #     term = np.array(term)        
-        #     H_full = H_full + ncon( (I4,I4,I4,term.reshape((4,4,4,4))), ((-2,-7),(-3,-8),(-4,-9),(-5,-1,-10,-6)) ).reshape((4**L,4**L))
-        # vals = sp.linalg.eigvals(H_full)
-        # print(sorted(np.real(vals))[:5])
-        # # print(sp.linalg.eigvals(Q.reshape(4,4)))
-        # print('\n')
-        
-      
-    ###################################
+        energy = np.conj(mps)@H_mpo@mps
 
-   
+        psi = expm@psi
+        psi = psi/np.sqrt(np.conj(psi)@psi)
+        
+        overlap = (np.conj(mps)@psi)
+        
+        trotter_free_fidelity = np.abs(overlap)
+        
+        print(f"{t=:.2f}, {s=:.4f}, {np.abs(energy)=}") 
+        print(f'{trotter_free_fidelity}, {fidelity_current[t_it]}, ')
+        print("sanity:", np.sqrt(np.conj(mps)@mps), np.sqrt(np.conj(psi)@psi))
+        
+        # vals = sp.linalg.eigvalsh(H_mpo_array)
+        # vals = sorted(vals)
+        # gap = min(gap, np.abs(vals[4]-vals[0]))
+        # print(":", sorted(vals)[:5], gap)
+        print("")
+        
