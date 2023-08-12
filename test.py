@@ -16,10 +16,18 @@ from tsp_lcu_wt_autodiff_remannian import lcu_unitary_circuit_optimization
 from utils import (norm_mps_ovrlap, cl_zero_mps, compute_energy_expval)
 
 
+
 if __name__ == "__main__":
-    # TODO: QCTN
-    # TODO: Parametrized auto Autodiff 
-    # TODO: Input and format of the MPS - should be some framework agnostic
+    
+    # DONE: Decompose into CNOT + OQGs and optimize OQG with autodiff gradient.
+    # TODO: Optimize two-qubit gates over isometric manifold.
+    # TODO: QCTN (Quantum Circuit Tensor Networks (also works in 2D))
+    # TODO: isoPEPS preparation not published yet.
+    # TODO: MPS in Quimb Format -> Gates? (also for LCU circuits)    
+    # TODO: Input and format of the MPS - should be framework agnostic
+    # TODO: LCU to tket circuit
+    # TODO: Break 4 qubit gate
+    # TODO: 2d AKLT
     
     overlaps_gap = 4
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from matplotlib import pyplot as plt
+
 import pickle as pkl
 import numpy as np
 import scipy as sp
@@ -10,49 +12,15 @@ half_pi = np.pi/2
 
 from ncon import ncon 
 
-from matplotlib import pyplot as plt
-
 import quimb.tensor as qtn
 import quimb as qu
 
 
 def get_maps_for_square_lattice(Lx, Ly):
     
-    
     pt2num = {(x, y): Lx*y + x for y in range(Ly) for x in range(Lx)}
     num2pt = {Lx*y + x: (x, y) for y in range(Ly) for x in range(Lx)}
-
-    bonds = {}
-    num2inds = {v: [None, None, None, None, f'p{v}'] for v in pt2num.values()}
-    num2nns  = {v: [None, None, None, None] for v in pt2num.values()}   # site num to nearest neighbor
-
-    for pt, v in pt2num.items():
-        lft = pt2num[(np.mod(pt[0]-1, Lx), pt[1])]
-        rht = pt2num[(np.mod(pt[0]+1, Lx), pt[1])]
-
-        bot = pt2num[pt[0], (np.mod(pt[1]+1, Ly))]
-        top = pt2num[pt[0], (np.mod(pt[1]-1, Ly))]
-
-        num2inds[v  ][0] = f'b_{v}_{lft}'
-        num2inds[lft][2] = f'b_{v}_{lft}'
-
-        num2inds[v  ][1] = f'b_{v}_{bot}'
-        num2inds[bot][3] = f'b_{v}_{bot}'
-        
-        num2nns[v  ][0] = lft
-        num2nns[lft][2] = v
-        
-        num2nns[v  ][1] = bot
-        num2nns[bot][3] = v
-        
-        bonds[(lft, v)] = 'H' # ordering of the bond is important
-        bonds[(bot, v)] = 'V'
-
-    sublattices = {}
-    sublattices['a'] = [num for num, pt in num2pt.items() if np.mod(np.mod(pt[0], 2)+np.mod(pt[1], 2), 2) == 0]
-    sublattices['b'] = [num for num, pt in num2pt.items() if np.mod(np.mod(pt[0], 2)+np.mod(pt[1], 2), 2) == 1]
-
-    return num2pt, pt2num, num2inds, sublattices, bonds, num2nns
+    return num2pt, pt2num
 
 
 def print_vector(vec):
@@ -65,46 +33,9 @@ def print_vector(vec):
         if np.abs(vec[indx])>1e-12:
             print(''.join([f'{i}' for i in inds]), vec[indx])
                     
-
-def constuct_parent_hamiltonian(Q, Lx=2,Ly=2):
-    
-    peps = qtn.PEPS.rand(Lx=5, Ly=5, bond_dim=3, seed=666)
-    
-    kernel = sp.linalg.null_space(ncon([Q,Q],[(-1,-2,1,-5,-7),(1,-3,-4,-6,-8)]).reshape(2**6,16**2))
-    ham_term = 0.    
-    for it in range(kernel.shape[1]):
-        v = kernel[:,it]
-        ham_term += ncon((np.conj(v),v),([-1],[-2]))
-    ham_term = ham_term.reshape((16,16,16,16))
-    return ham_term
-    
-    # Q_0 = (Q[0:1, :, :])
-    # Q_n = (Q[:, 0:1, :])
-    
-    # kernel = sp.linalg.null_space(ncon([Q_0,Q],[(-1,1,-3),(1,-2,-4)]).reshape(2,4**2))
-    # ham_term_0 = 0.    
-    # for it in range(kernel.shape[1]):
-    #     v = kernel[:,it]
-    #     ham_term_0 += ncon((np.conj(v),v),([-1],[-2]))    
-    # ham_term_0 = ham_term_0.reshape((4,4,4,4))
-    
-    # kernel = sp.linalg.null_space(ncon([Q,Q_n],[(-1,1,-3),(1,-2,-4)]).reshape(2,4**2))
-    # ham_term_n = 0.    
-    # for it in range(kernel.shape[1]):
-    #     v = kernel[:,it]
-    #     ham_term_n += ncon((np.conj(v),v),([-1],[-2]))    
-    # ham_term_n = ham_term_n.reshape((4,4,4,4))
-    
-    # if not cyclic:
-    #     H = [qtn.Tensor(ham_term, inds=(f'k{i}',f'k{i+1}', f'b{i}',f'b{i+1}')) for i in range(L-1)]
-    #     H[ 0] = qtn.Tensor(ham_term_0, inds=(f'k{0}',f'k{1}', f'b{0}',f'b{1}'))
-    #     H[-1] = qtn.Tensor(ham_term_n, inds=(f'k{L-2}',f'k{L-1}', f'b{L-2}',f'b{L-1}')) 
         
-    # return H, ham_term, ham_term_0, ham_term_n
-
-
-if __name__ == "__main__":    
-    print('prepare 2d aklt state\n')
+def construct_aklt_tensor():
+    # print('prepare 2d aklt state\n')
     
     x = np.array(qu.pauli('x'))
     y = np.array(qu.pauli('y'))
@@ -121,8 +52,8 @@ if __name__ == "__main__":
         s_ttl[label] = tmp.reshape(16,16)
         
     s_sqr = (s_ttl['x']@s_ttl['x'] + 
-             s_ttl['y']@s_ttl['y'] + 
-             s_ttl['z']@s_ttl['z'] )
+              s_ttl['y']@s_ttl['y'] + 
+              s_ttl['z']@s_ttl['z'] )
     
     s_sqr = s_sqr.reshape(16,16)
 
@@ -137,21 +68,66 @@ if __name__ == "__main__":
             proj_symm += ncon([vec, np.conj(vec)],[(-1,),(-2,)])
             s_val = (vec.T)@s_sqr@vec
             z_val = (vec.T)@s_ttl['z']@vec
-            print(s_val, z_val)
-            print_vector(vec)
-            print('\n')
+            # print(s_val, z_val)
+            # print_vector(vec)
+            # print('\n')
             
-    aklt_tensor =  proj_symm.reshape([2]*4+[16])
-    
-    
+    proj_symm =  proj_symm.reshape([2]*4+[16])
+    singlet = np.sqrt(0.5) * np.array([[0., -1.], [1.,  0.]]) 
+    aklt_tensor = ncon([proj_symm, singlet, singlet], [(-1,-2,3,4,-5),(-3,3),(-4,4)])
 
+    return aklt_tensor
+
+
+def construct_parent_hamiltonian(tensor_grid, bonds, num2pt, Lx, Ly):
+    # print('constuct parent hamiltonian with open bc')
+    hamiltonian  = {}
     
-    Lx, Ly = 4, 4
+    H2 = {}
+    for bond in bonds:
+        (x1,y1), (x2,y2), orientation = num2pt[bond[0]], num2pt[bond[1]], bond[2]
+        Q1 = tensor_grid[y1][x1]
+        Q2 = tensor_grid[y2][x2]
+        
+        # print((x1,y1), (x2,y2), orientation, Q1.shape, Q2.shape)
+        
+        if orientation=='H':
+            kernel = sp.linalg.null_space(ncon([Q1,Q2],[(-1,-2,1,-5,-7),(1,-3,-4,-6,-8)]).reshape(-1,16**2))
+            
+        if orientation=='V':
+            kernel = sp.linalg.null_space(ncon([Q1,Q2],[(-1,-3,-4,1,-7),(-2,1,-5,-6,-8)]).reshape(-1,16**2))
+            
+        ham_term = 0.
+        for it in range(kernel.shape[1]):
+            v = kernel[:,it]
+            ham_term += ncon((np.conj(v),v),([-1],[-2]))            
+        
+        ham_term = ham_term.reshape((16,16,16,16))
+        hamiltonian[bond] = ham_term
+        
+        H2[(y1,x1), (y2, x2)] = qu.qu(ham_term)
+
+                
+    quimb_hamiltonian = qtn.LocalHam2D(Lx, Ly, H2=H2)
+    # quimb_hamiltonian.draw()
+
+    return hamiltonian, quimb_hamiltonian
+
+
+def construct_tensor_grid(local_tensor, pt2num, Lx, Ly):
     tensor_grid = []
+    bonds = set()
     for y in range(Ly):
         tensor_row = []
         for x in range(Lx):
-            tensor = aklt_tensor.copy()
+            
+            if x<(Lx-1):
+                bonds.add(( pt2num[(x,y)], pt2num[(x+1,y)], 'H'))
+                
+            if y<(Ly-1):
+                bonds.add(( pt2num[(x,y)], pt2num[(x,y+1)], 'V'))
+                
+            tensor = local_tensor.copy()
             bdry = []
             if x==0:
                 tensor = ncon([tensor, np.array([1,0]).reshape(2,-1)],[(1,-2,-3,-4,-5),(1,-1)])            
@@ -171,31 +147,64 @@ if __name__ == "__main__":
                 
             tensor_row.append(tensor)#.squeeze())
         
-            print(f'({x},{y}), {bdry}')
+            # print(f'({x},{y}), {bdry}')
         tensor_grid.append(tensor_row)
-    
+        
+    return tensor_grid, bonds
 
-    peps = qtn.PEPS(tensor_grid, shape='ldrup')
-    ham_term = constuct_parent_hamiltonian(aklt_tensor, Lx=2,Ly=2)
+
+def apply_evolution_opeerator(parent_hamiltonian, peps, tau, Tmax):
+    d = 16
+    max_bond = 4
+    for bond, curr_term in parent_hamiltonian.terms.items():
+        # print(bond, curr_term.shape)
+        curr_gate = sp.linalg.expm(curr_term.reshape(d**2,d**2)*-1j*(tau/1)*Tmax).reshape((d,d,d,d))
+        peps.gate(curr_gate, where=bond, contract='split', inplace=True)
+        
+        peps.compress_all(inplace=True, max_bond=max_bond)
+        
+
+
+if __name__ == "__main__":    
+
+    Lx, Ly = 2, 6
+    num2pt, pt2num = get_maps_for_square_lattice(Lx, Ly)
+    
+    aklt_tensor = construct_aklt_tensor()
+    bell_tensor = (np.eye(16)).reshape(aklt_tensor.shape)
+    
+    tensor_grid, bonds = construct_tensor_grid(aklt_tensor, pt2num, Lx, Ly)
+    aklt_peps = qtn.PEPS(tensor_grid, shape='ldrup')
+    aklt_peps = aklt_peps/np.sqrt(aklt_peps.H@aklt_peps)
+    
+    tensor_grid, _ = construct_tensor_grid(bell_tensor, pt2num, Lx, Ly)
+    bell_peps = qtn.PEPS(tensor_grid, shape='ldrup')
     
     
-    H2 = {}
-    for i in range(Lx-1):
-        for j in range(Ly-1):
-            H2[(i, j), (i + 1, j)] = qu.qu(ham_term)
-            H2[(i, j), (i, j + 1)] = qu.qu(ham_term)
+    T, tau = 6, 0.04
+    # s_func = lambda t,T=T: sin( half_pi*sin(half_pi*t/T)**2 )**2
+    s_func = lambda t,T=T: sin(half_pi*t/T)**2
+    # s_func = lambda t,T=T: t/T
+    
+    ts = np.arange(0, T+tau, tau)
+    
+    peps = bell_peps
+    for t_it, t in enumerate(ts):
+        s = s_func(t)
+        local_tensor = (1-s)*bell_tensor + s*aklt_tensor
+        
+        tensor_grid, bonds = construct_tensor_grid(local_tensor, pt2num, Lx, Ly)    
+        _, parent_hamiltonian = construct_parent_hamiltonian(tensor_grid, bonds, num2pt, Lx=Lx, Ly=Ly)
+        
+        apply_evolution_opeerator(parent_hamiltonian, peps, tau=tau, Tmax=T)
+        peps = peps/np.sqrt(peps.H@peps)
         
         
-    parent_hamiltonian = qtn.LocalHam2D(Lx, Ly, H2=H2)
-    # parent_hamiltonian.draw()
-    exp_val = peps.compute_local_expectation(parent_hamiltonian.terms, max_bond=32)
-    print(exp_val)
-    
-    su = qtn.SimpleUpdate(
-        peps, 
-        parent_hamiltonian,
-        chi=32,  # boundary contraction bond dim for computing energy
-        compute_energy_every=10,
-        compute_energy_per_site=True,
-        keep_best=True,
-        )
+        # peps = qtn.PEPS(tensor_grid, shape='ldrup')
+        exp_val = np.real(peps.compute_local_expectation(parent_hamiltonian.terms, max_bond=32))
+        # denom = np.sqrt((peps.H@peps)*(aklt_peps.H@aklt_peps))
+        target_fidelity = np.abs(peps.H@
+                                 aklt_peps)#/denom)
+        
+        print(f'{t_it=:03d}, {t=:.2f}, {s=:.5f}, {exp_val=:.08f}, {target_fidelity=:.08f}')
+        
