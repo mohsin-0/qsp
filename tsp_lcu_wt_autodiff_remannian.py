@@ -249,7 +249,7 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
     no_of_layers, L = len(lcu_mps), target_mps.L
     
     overlaps_list = []
-    for j in tqdm(range(iters)):        
+    for j in tqdm(range(iters)):
         # overlap, grad = value_and_gradient(lcu_isometry_list_var, kappas)
         overlap, grad = value_and_gradient(lcu_isometry_list_var, lcu_shapes_list, 
                                            target_isometry_list, target_shapes_list, 

@@ -274,54 +274,7 @@ if __name__ == "__main__":
     L = 32
     cyclic = False
     
-    # gaps_all = []
-    # thetas = []#list(np.linspace(0, 0.5, 21))#
-    # thetas.append(np.arctan(1/3))
-    # thetas = sorted(thetas)
-        
-    # for theta in thetas:
-    #     H = build_aklt_hamiltonian_1d_sparse(theta, L, cyclic=False, sparse=True)
-    #     energies = qu.eigvalsh(H, k=5)
-        
-    #     gaps = (energies[1]-energies[0], 
-    #             energies[2]-energies[0], 
-    #             energies[3]-energies[0], 
-    #             energies[4]-energies[0])
-        
-    #     gaps_all.append(gaps)
-        
-    #     H_mpo = build_aklt_hamiltonian_1d_mpo(theta, L, cyclic=False, compress=True)
-    #     dmrg = qtn.DMRG(H_mpo, bond_dims=[2]*24, cutoffs=1e-11)
-    #     dmrg.solve()
-    #     # print(theta, np.abs(sorted(energies)[0]-dmrg.energy), dmrg.energy)
-            
-    # # plt.plot(thetas, np.array(gaps_all),'.-')
-    
-    
-    # singlet = np.sqrt(0.5) * np.array([[0., -1.], [1.,  0.]]) # vL p1
-    # singlet_sqrt =  sp.linalg.sqrtm(singlet)
-    
-    # proj = np.zeros([2, 2, 3]) 
-    # proj[0, 0, 0] = 1.  
-    # proj[0, 1, 1] = 1./np.sqrt(2)  
-    # proj[1, 0, 1] = 1./np.sqrt(2)
-    # proj[1, 1, 2] = 1.  
-    
-    # A = ncon([proj, singlet], [(-1,2,-3),(2,-2)]) * np.sqrt(4./3.)
-    
-    # As = [A] * L
-    # As[ 0] = np.squeeze(As[ 0][0, :, :])
-    # As[-1] = np.squeeze(As[-1][:, 1, :])
-
-    # mps = qtn.MatrixProductState(As, shape='lrp')
-        
-    # mps_adj = mps.H
-    # mps_adj.align_(H_mpo, mps_adj)
-
-    # exp_val = ((mps_adj & H_mpo & mps)^all)/((mps.H & mps)^all)
-    # print( np.abs(exp_val - dmrg.energy), dmrg.energy)
-    
-    # ####################################    
+    ####################################    
     Q_aklt = make_1d_aklt_tensor()
     
     mps_aklt = make_mps_from_Q(L, Q_aklt, cyclic=cyclic)

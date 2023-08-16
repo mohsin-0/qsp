@@ -1,7 +1,62 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+
+from ncon import ncon
 import quimb.tensor as qtn
 from quimb import pauli
+
+
+def print_vector(vec):
+    n = int(np.log2(np.prod(vec.shape)))
+    sub_indx_dims = [2] * n
+
+    for indx in range(np.prod(sub_indx_dims)):
+        inds = np.unravel_index(indx, sub_indx_dims)
+
+        if np.abs(vec[indx]) > 1e-12:
+            print("".join([f"{i}" for i in inds]), vec[indx])
+            
+            
+def construct_tensor_grid(local_tensor, Lx, Ly):
+    pt2num = {(x, y): Lx * y + x for y in range(Ly) for x in range(Lx)}
+    
+    tensor_grid = []
+    bonds = set()
+    for y in range(Ly):
+        tensor_row = []
+        for x in range(Lx):
+
+            if x < (Lx - 1):
+                bonds.add((pt2num[(x, y)], pt2num[(x + 1, y)], "H"))
+
+            if y < (Ly - 1):
+                bonds.add((pt2num[(x, y)], pt2num[(x, y + 1)], "V"))
+
+            tensor = local_tensor.copy()
+            bdry = []
+            if x == 0:
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],[(1, -2, -3, -4, -5), (1, -1)])
+                bdry.append("L")
+
+            if x == (Lx - 1):
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],[(-1, -2, 3, -4, -5), (3, -3)])
+                bdry.append("R")
+
+            if y == 0:
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],[(-1, 2, -3, -4, -5), (2, -2)])
+                bdry.append("B")
+
+            if y == (Ly - 1):
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],[(-1, -2, -3, 4, -5), (4, -4)])
+                bdry.append("T")
+
+            tensor_row.append(tensor)  # .squeeze())
+
+            # print(f'({x},{y}), {bdry}')
+        tensor_grid.append(tensor_row)
+
+    return tensor_grid, bonds
+
 
 def compute_energy_expval(psi, qubit_hamiltonian):
     

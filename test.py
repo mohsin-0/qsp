@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import pickle as pkl
-import numpy as np
 from matplotlib import pyplot as plt
+import numpy as np
+import pickle as pkl
 
 import quimb.tensor as qtn
 
@@ -14,7 +14,7 @@ from tsp_sequ_wt_autodiff_parametrized import sequ_unitary_circuit_optimization
 from tsp_lcu_wt_autodiff_remannian import lcu_unitary_circuit_optimization
 
 from utils import (norm_mps_ovrlap, cl_zero_mps, compute_energy_expval)
-
+from make_aklt import make_aklt_1d_mps
 
 
 if __name__ == "__main__":
@@ -33,81 +33,40 @@ if __name__ == "__main__":
 
     qubit_hamiltonian = 0
     preparation_method = 'SeqU'#'LCU'#
-    mps_type = 'aklt'#''random'#'random'#'P4'#'heisenberg'#'N2'#
+    mps_type = 'random'#'random'#'P4'#'heisenberg'#'N2'#'aklt'#
     
     data_dict = {}
     if mps_type == 'aklt':
+        L = 8
+        mps, _ = make_aklt_1d_mps(L=L)
+        mps = qtn.MatrixProductState(mps, shape='lrp')
         
-        from adiabatic_time_evolution import make_1d_aklt_tensor
-        Q_aklt = make_1d_aklt_tensor()
-
-        ten = qtn.Tensor(Q_aklt.reshape((2,2, 2,2)), inds=('vl','vr','pl','pr') )
-        tn = ten.split(('vl','pl'), bond_ind='v0')
-        ten0, ten1 = tn.tensor_map[0], tn.tensor_map[1]
-        ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
-        ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
-        
-        ten0 = np.array(ten0.data, dtype=np.float64)
-        ten1 = np.array(ten1.data, dtype=np.float64)
-        
-        L=16
-        cyclic = False
-        Qs = []
-        for _ in range(L):
-            Qs.append(ten0)
-            Qs.append(ten1)
-        
-        if not cyclic:
-            Qs[ 0] = np.squeeze(Qs[ 0][0, :, :])
-            Qs[-1] = np.squeeze(Qs[-1][:, 0, :])
-        mps = qtn.MatrixProductState(Qs, shape='lrp')
-        
-        params = [0]
         data = {}
         data['quimb_mps'] = mps
         data['qubit_hamiltonian'] = 0
-        data_dict[0] = data
         
-    
+        
     if mps_type == 'random':
-        params = [0]
         data = {}
         data['quimb_mps'] = (qtn.MPS_rand_state(L=16, bond_dim=4) + 
                              qtn.MPS_rand_state(L=16, bond_dim=4)*0*1j)
-        
-        data['qubit_hamiltonian'] = 0
-        data_dict[0] = data
+        data['qubit_hamiltonian'] = 0.
         
     
-    if mps_type == 'P4':
-        params = [1.9, 2, 2.1]
-        for param in params:
-            filename = f'/home/mohsin/Documents/cqc_github/TSP/data_tsp/P4_6-31G/dist{param:0.4f}.pkl'
-            with open(filename, 'rb') as f:
-                data_dict[param] = pkl.load(f)
-                
-    if mps_type == 'N2':
-        params = [1.8, 2.0, 2.2]
-        for param in params:
-            filename = f'/home/mohsin/Documents/cqc_github/TSP/data_tsp/N2_STO-6G/dist{param:0.4f}.pkl'
-            with open(filename, 'rb') as f:
-                data_dict[param] = pkl.load(f)
-    
-    if mps_type == 'heisenberg':
-        params = [0.6,0.8,1]
-        for param in params:
-            filename = f'/home/mohsin/Documents/cqc_github/TSP/data_tsp/heisenberg_L32/dist{param:0.4f}.pkl'
-            with open(filename, 'rb') as f:
-                data_dict[param] = pkl.load(f)
-    
-    
-    data = data_dict[params[0]]
+    if mps_type in ['P4','N2','heisenberg']:
+        filenames = {'P4': 'test_data/P4_6-31G_dist2.0000.pkl', 
+                     'N2': 'test_data/N2_STO-6G_dist2.0000.pkl',
+                     'heisenberg':'test_data/heisenberg_L32_dist0.8000.pkl'}
+        
+        with open(filenames[mps_type], 'rb') as f:
+            data = pkl.load(f)
+        
+        
     target_mps = data['quimb_mps']
     qubit_hamiltonian = data['qubit_hamiltonian']
     target_mps.permute_arrays(shape='lpr')
     target_mps.compress('right')
     L = target_mps.L
-    
     
     for preparation_method in ['LCU+autodiff']:#['SeqU']:#['SeqU+autodiff']:#['LCU+autodiff']:#['SeqU', 'SeqU+autodiff', 'LCU', 'LCU+autodiff']:
         
@@ -139,7 +98,7 @@ if __name__ == "__main__":
 
         if preparation_method=='LCU':
             italic_D_lcu = 24
-            preparation_data = generate_lcu_for_mps( target_mps, qubit_hamiltonian, italic_D_lcu, do_compression=True, verbose=False)        
+            preparation_data = generate_lcu_for_mps( target_mps, qubit_hamiltonian, italic_D_lcu, do_compression=True, verbose=False)
             
             kappas, unitaries = preparation_data['kappas'], preparation_data['unitaries']
             

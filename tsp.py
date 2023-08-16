@@ -7,9 +7,9 @@ Created on Wed Sep 22 12:12:48 2021
 import numpy as np
 from scipy.linalg import null_space
 from quimb.tensor import Tensor, MatrixProductState, TensorNetwork
-# from quimb import *
+
 from ncon import ncon
-# from scipy.optimize import minimize, Bounds
+
 
 
 dtype = 'complex128'
