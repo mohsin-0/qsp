@@ -1,40 +1,47 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Sep 22 12:12:48 2021
-@author: mohsin
-"""
 import numpy as np
 from scipy.linalg import null_space
-from quimb.tensor import Tensor, MatrixProductState, TensorNetwork
 
+import quimb.tensor as qtn
 from ncon import ncon
 
+DTYPE = np.complex128
+
+def generate_bond_d_unitary(psi):    
+    d = psi.phys_dim()
+    
+    ####    
+    D2_psi = psi.copy(deep=True)
+    D2_psi.compress('right', max_bond=d)
+    D2_psi.right_canonize(normalize=True)
+    
+    Gs_lst = generate_unitaries(D2_psi)
+    D2_psi = apply_inverse_unitary_layer_on_wfn(Gs_lst, D2_psi)
+    return Gs_lst
 
 
-dtype = 'complex128'
-
-def generate_unitaries(mps_in, d=2):
+def generate_unitaries(mps_in):
+    d = mps_in.phys_dim()
     mps = mps_in.copy(deep=True)
 
     Gs_lst = []
     submps_indices = get_submps_indices(mps)
     for start_indx, end_indx in submps_indices:
-        # print(f'now [{(start_indx)}, {(end_indx)}]:')
-
         # construct the unitaries
         Gs, isoms, kernels = [], [], []
         for it in range(start_indx, end_indx+1):
             if (it == (end_indx)):
                 if ((end_indx-start_indx)==0):
-                    G = np.zeros((d,d), dtype=dtype)
+                    G = np.zeros((d,d), dtype=DTYPE)
                     G[0,:] = mps[it].data.reshape((1,-1))
-                    G[1,:] = null_space(mps[it].data.copy().reshape((1, -1)).conj()).reshape((1, -1))
+                    G[1,:] = null_space(mps[it].data.reshape((1, -1)).conj()).reshape((1, -1))
 
                 else:
                     G = mps[it].data
 
-                G = Tensor(G.reshape((d,d)).T, inds=('v', 'p'), tags={'G'}) # .T at the end is useful for the application of unitaries as quantum circuit
+                G = qtn.Tensor(G.reshape((d,d)).T, inds=('v', 'p'), tags={'G'}) 
+                # .T at the end is useful for the application of unitaries as quantum circuit
                 
                 Gs.append(G)
                 
@@ -44,9 +51,9 @@ def generate_unitaries(mps_in, d=2):
 
             elif (it!=start_indx):
 
-                G = np.zeros((d,d,d,d), dtype=dtype)
+                G = np.zeros((d,d,d,d), dtype=DTYPE)
                 G[0,:,:,:]=mps[it].data
-                kernel = null_space(mps[it].data.copy().reshape((d, -1)).conj())
+                kernel = null_space(mps[it].data.reshape((d, -1)).conj())
                 kernel = kernel*(1/np.exp(1j*np.angle(kernel[0,:])))
                 G[1:d, :, :, :] = kernel.reshape((d, d, d, d-1)).transpose((3, 2, 0, 1))
 
@@ -56,7 +63,9 @@ def generate_unitaries(mps_in, d=2):
                 G = G.transpose((1,0,3,2))
                 # now the indices of G are ordered as G(B,L,R,T)
 
-                G = Tensor(G.reshape((d**2,d**2)).T, inds=['L', 'R'], tags={'G'})   # .T at the end is useful for the application of unitaries as quantum circuit
+                G = qtn.Tensor(G.reshape((d**2,d**2)).T, inds=['L', 'R'], tags={'G'})   
+                # .T at the end is useful for the application of unitaries as quantum circuit
+                
                 Gs.append(G)
                 
                 ############
@@ -69,10 +78,9 @@ def generate_unitaries(mps_in, d=2):
                 kernels.append(kernel)
 
             elif (it == start_indx):
-
-                G = np.zeros((d, d, d, d), dtype=dtype)
+                G = np.zeros((d, d, d, d), dtype=DTYPE)
                 G[0, 0, :, :] = mps[it].data.reshape((d, -1))
-                kernel = null_space(mps[it].data.copy().reshape((1, -1)).conj())
+                kernel = null_space(mps[it].data.reshape((1, -1)).conj())
                 
                 for i in range(d):
                     for j in range(d):
@@ -87,7 +95,9 @@ def generate_unitaries(mps_in, d=2):
                 G = G.transpose((1,0,3,2))
                 # now the indices of G are ordered as G(B,L,R,T)
 
-                G = Tensor(G.reshape((d**2,d**2)).T, inds=['L','R'], tags={'G'})    # .T at the end is useful for the application of unitaries as quantum circuit
+                G = qtn.Tensor(G.reshape((d**2,d**2)).T, inds=['L','R'], tags={'G'})    
+                # .T at the end is useful for the application of unitaries as quantum circuit
+                
                 Gs.append(G)
                 
                 ############
@@ -102,47 +112,33 @@ def generate_unitaries(mps_in, d=2):
         Gs_lst.append([start_indx, end_indx, Gs, isoms, kernels])
 
     return Gs_lst
+
     
-def apply_unitary_layer_on_wfn(Gs_lst, wfn):
-    
+def apply_unitary_layer_on_wfn(Gs_lst, wfn):    
     A = wfn.copy(deep=True)
-    # wfn_clone = wfn.copy(deep=True)
 
     for start_indx, end_indx, Gs, _, _ in Gs_lst:
         for it in range(start_indx, end_indx+1):
             if (it==end_indx):
-                # wfn_clone.gate_(Gs[it-start_indx].data, where=[it], tags='U', propagate_tags='sites')
-                
-                
                 A.gate_(Gs[it-start_indx].data, where=[it])
                 loc = np.where([isinstance(A[jt],tuple) for jt in range(A.L)])[0][0]
                 A.contract_ind(A[loc][-1].inds[-1])
-                # A.right_canonize()
-                
-
 
             else:
-                # wfn_clone.gate_(Gs[it-start_indx].data, where=[it,it+1], tags='U', propagate_tags='sites')
-                
                 A=A.gate_split(Gs[it-start_indx].data, where=[it,it+1])                
-                # A.right_canonize()
-
+                
     A.permute_arrays(shape='lpr')
-    # print(np.conj(wfn_clone.to_dense().T)@A.to_dense())
     A.compress('right')
+    return A
 
-    return A#wfn_clone
 
 def apply_unitary_layer_on_wfn_usg_ncon(Gs_lst, wfn):
-    
-    zero_wf = wfn.reshape(1,-1)
     start_indx, end_indx, Gs, _, _  = Gs_lst[0]
     L = end_indx+1
-    wfn = wfn.reshape([2]*L)
-    
+    wfn = wfn.reshape([2]*L)    
     lft_inds = (-(np.arange(L)+1+L)).tolist()
     
-    u = np.eye(2**L, dtype=np.complex128).reshape([2]*(2*L))
+    u = np.eye(2**L, dtype=DTYPE).reshape([2]*(2*L))
     for it in range(L):
         if (it==end_indx):
             inds = -(np.arange(L)+1)
@@ -163,8 +159,7 @@ def apply_unitary_layer_on_wfn_usg_ncon(Gs_lst, wfn):
             u = ncon([u, G],( inds.tolist()+lft_inds, [-inds[it], -inds[it+1], inds[it], inds[it+1]]))
 
     u = u.reshape([2**L]*2)
-    a = ncon([zero_wf.reshape(-1,1), u],([1,-1],[-2,1]))
-    wfn = MatrixProductState.from_dense(wfn, dims=[2]*L)
+    wfn = qtn.MatrixProductState.from_dense(wfn, dims=[2]*L)
     return wfn
 
 
@@ -174,7 +169,7 @@ def generate_unitary_from_G_lst(Gs_lst):
     L = end_indx+1
     lft_inds = (-(np.arange(L)+1+L)).tolist()
     
-    u = np.eye(2**L, dtype=np.complex128).reshape([2]*(2*L))
+    u = np.eye(2**L, dtype=DTYPE).reshape([2]*(2*L))
     for it in range(L):
         if (it==end_indx):
             inds = -(np.arange(L)+1)
@@ -196,49 +191,28 @@ def generate_unitary_from_G_lst(Gs_lst):
 
 
 def apply_unitary_layers_on_wfn(unitary_layers, wfn):
-
     for it in reversed(range(len(unitary_layers))):
-        wfn = apply_unitary_layer_on_wfn(unitary_layers[it], wfn)#MatrixProductState.from_dense((apply_unitary_layer_on_wfn(unitary_layers[it], wfn)).to_dense(), dims = [2]*wfn.L)
-        
-        # wfn = apply_unitary_layer_on_wfn(unitary_layers[it], wfn)
-        # wfn = wfn.contract_compressed(optimize=None, max_bond=24)
+        wfn = apply_unitary_layer_on_wfn(unitary_layers[it], wfn)
         
     return wfn
 
 
-# def apply_inverse_multi_unitary_layer_on_wfn(pre_factors, unitaries, psi):
-#     dims = psi.shape
-#     psi_it = MatrixProductState.from_dense(np.ones(shape=(prod(dims),1)), dims=dims)*0
-
-#     for pre_factor, Gs_lst in zip(pre_factors, unitaries):
-#         psi_it = MatrixProductState.from_dense(psi_it.to_dense() + (1/pre_factor)*apply_inverse_unitary_layer_on_wfn(Gs_lst, psi).to_dense(), dims=dims)
-
-#     return psi_it
-
-
 def apply_inverse_unitary_layer_on_wfn(Gs_lst, wfn):    
     A = wfn.copy(deep=True)
-    # wfn_clone = wfn.copy(deep=True)
-
+    
     for start_indx, end_indx, Gs, _, _ in Gs_lst:
-        # u_tags = [f'U{i}' for i in reversed(range(L))]
         for it in list(reversed(range(start_indx, end_indx+1))):
             if (it==end_indx):
-                # wfn_clone.gate_(Gs[it-start_indx].data.conj().T, where=[it], tags='U', propagate_tags='sites')
-                
                 A.gate_(Gs[it-start_indx].data.conj().T, where=[it])
                 loc = np.where([isinstance(A[jt],tuple) for jt in range(A.L)])[0][0]
                 A.contract_ind(A[loc][-1].inds[-1])
                 # A.right_canonize()
                 
             else:
-                # wfn_clone.gate_(Gs[it-start_indx].data.conj().T, where=[it,it+1], tags='U', propagate_tags='sites')
-                
                 A=A.gate_split(Gs[it-start_indx].data.conj().T, where=[it,it+1])                
                 # A.right_canonize()
                 
     A.permute_arrays(shape='lpr')
-    # print(np.conj(wfn_clone.to_dense().T)@A.to_dense())
     return A
 
 

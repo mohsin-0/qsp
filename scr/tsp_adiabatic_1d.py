@@ -10,7 +10,7 @@ import quimb.tensor as qtn
 import quimb as qu
 from tqdm import tqdm
 
-from make_aklt import make_aklt_1d_mps, make_bell_pair_1d_mps
+from aklt_tensor_network import make_aklt_1d_mps, make_bell_pair_1d_mps
 
 
 def make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True):

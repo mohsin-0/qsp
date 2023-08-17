@@ -8,7 +8,7 @@ import quimb as qu
 import quimb.tensor as qtn
 from tqdm import tqdm
 
-from make_aklt import make_aklt_2d_peps, make_bell_2d_peps
+from aklt_tensor_network import make_aklt_2d_peps, make_bell_2d_peps
 
 
 def construct_parent_hamiltonian(tensor_grid, bonds, Lx, Ly, phy_dim):

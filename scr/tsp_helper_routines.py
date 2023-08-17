@@ -2,21 +2,11 @@
 import numpy as np
 
 from ncon import ncon
+
+import quimb as qu
 import quimb.tensor as qtn
-from quimb import pauli
 
 
-def print_vector(vec):
-    n = int(np.log2(np.prod(vec.shape)))
-    sub_indx_dims = [2] * n
-
-    for indx in range(np.prod(sub_indx_dims)):
-        inds = np.unravel_index(indx, sub_indx_dims)
-
-        if np.abs(vec[indx]) > 1e-12:
-            print("".join([f"{i}" for i in inds]), vec[indx])
-            
-            
 def construct_tensor_grid(local_tensor, Lx, Ly):
     pt2num = {(x, y): Lx * y + x for y in range(Ly) for x in range(Lx)}
     
@@ -35,19 +25,23 @@ def construct_tensor_grid(local_tensor, Lx, Ly):
             tensor = local_tensor.copy()
             bdry = []
             if x == 0:
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],[(1, -2, -3, -4, -5), (1, -1)])
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
+                              [(1, -2, -3, -4, -5), (1, -1)])
                 bdry.append("L")
 
             if x == (Lx - 1):
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],[(-1, -2, 3, -4, -5), (3, -3)])
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
+                              [(-1, -2, 3, -4, -5), (3, -3)])
                 bdry.append("R")
 
             if y == 0:
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],[(-1, 2, -3, -4, -5), (2, -2)])
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
+                              [(-1, 2, -3, -4, -5), (2, -2)])
                 bdry.append("B")
 
             if y == (Ly - 1):
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],[(-1, -2, -3, 4, -5), (4, -4)])
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
+                              [(-1, -2, -3, 4, -5), (4, -4)])
                 bdry.append("T")
 
             tensor_row.append(tensor)  # .squeeze())
@@ -69,7 +63,7 @@ def compute_energy_expval(psi, qubit_hamiltonian):
         psi_op = psi.copy(deep=True)    
         for indx, label in key:
             psi_op.gate_(
-                pauli(label), indx)    
+                qu.pauli(label), indx)    
         nomin = (psi_op & psi.H)^all
         
         nrgy += qubit_hamiltonian[key]*(nomin/denom)
@@ -92,7 +86,6 @@ def cl_zero_mps(L):
     return zero_wfn
 
 
-
 def unitaries_specs(Gs_lst):
     gate_count = 0
     depth = 0
@@ -105,6 +98,8 @@ def unitaries_specs(Gs_lst):
             depth = curr_depth
             
     return depth, gate_count
+
+
 
 
 
@@ -126,3 +121,4 @@ def norm_mps_ovrlap(mps1, mps2):
     denom2 = qtn.TensorNetwork([mps2,mps2.H])^all
     
     return nomin/np.sqrt(denom1*denom2)
+

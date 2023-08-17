@@ -5,7 +5,7 @@ import scipy as sp
 
 from ncon import ncon
 
-import utils
+import tsp_helper_routines as tsp_hr
 
 pauli_x = [[0.+0.j, 1.+0.j],
            [1.+0.j, 0.+0.j]]
@@ -101,7 +101,7 @@ def make_aklt_1d_mps(L):
 def make_bell_2d_peps(Lx, Ly):
     bell_tensor = (np.eye(16)).reshape((2,2,2,2, 16))
     
-    tensor_grid, bonds = utils.construct_tensor_grid(bell_tensor, Lx, Ly)
+    tensor_grid, bonds = tsp_hr.construct_tensor_grid(bell_tensor, Lx, Ly)
     return tensor_grid, bonds
 
 
@@ -139,5 +139,5 @@ def make_aklt_2d_peps(Lx, Ly):
     aklt_tensor = ncon( (proj_symm, singlet, singlet), 
                            [(-1, -2, 3, 4, -5), (-3, 3), (-4, 4)])
 
-    tensor_grid, bonds = utils.construct_tensor_grid(aklt_tensor, Lx, Ly)
+    tensor_grid, bonds = tsp_hr.construct_tensor_grid(aklt_tensor, Lx, Ly)
     return tensor_grid, bonds

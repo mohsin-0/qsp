@@ -7,14 +7,16 @@ import pickle as pkl
 
 import quimb.tensor as qtn
 
-from tsp import apply_unitary_layers_on_wfn
+import tsp
+import tsp_helper_routines as tsp_hr
+
+from aklt_tensor_network import make_aklt_1d_mps
+
 from tsp_sequ import generate_sequ_for_mps
 from tsp_lcu import generate_lcu_for_mps
 from tsp_sequ_wt_autodiff_parametrized import sequ_unitary_circuit_optimization
 from tsp_lcu_wt_autodiff_remannian import lcu_unitary_circuit_optimization
 
-from utils import (norm_mps_ovrlap, cl_zero_mps, compute_energy_expval)
-from make_aklt import make_aklt_1d_mps
 
 
 if __name__ == "__main__":
@@ -28,19 +30,42 @@ if __name__ == "__main__":
     # TODO: LCU to tket circuit
     # TODO: Break 4 qubit gate
     # TODO: 2d AKLT
-    
+    # TODO: sanity check for TSP - d==chi
+    # add references
+      
     overlaps_gap = 4
 
     qubit_hamiltonian = 0
     preparation_method = 'SeqU'#'LCU'#
-    mps_type = 'random'#'random'#'P4'#'heisenberg'#'N2'#'aklt'#
+    mps_type = 'aklt'#''random'#'random'#'P4'#'heisenberg'#'N2'#
     
     data_dict = {}
     if mps_type == 'aklt':
-        L = 8
-        mps, _ = make_aklt_1d_mps(L=L)
-        mps = qtn.MatrixProductState(mps, shape='lrp')
+        L=8
+        aklt_tens, _ = make_aklt_1d_mps(L//2)
+        Q_aklt = aklt_tens[2]
+
+        ten = qtn.Tensor(Q_aklt.reshape((2,2, 2,2)), inds=('vl','vr','pl','pr') )
+        tn = ten.split(('vl','pl'), bond_ind='v0')
+        ten0, ten1 = tn.tensor_map[0], tn.tensor_map[1]
+        ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
+        ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
         
+        ten0 = np.array(ten0.data, dtype=np.float64)
+        ten1 = np.array(ten1.data, dtype=np.float64)
+        
+        cyclic = False
+        Qs = []
+        for _ in range(L):
+            Qs.append(ten0)
+            Qs.append(ten1)
+        
+        if not cyclic:
+            Qs[ 0] = np.squeeze(Qs[ 0][0, :, :])
+            Qs[-1] = np.squeeze(Qs[-1][:, 0, :])
+        mps = qtn.MatrixProductState(Qs, shape='lrp')
+
+        # mps = qtn.MatrixProductState(aklt_tens,shape='lrp')        
         data = {}
         data['quimb_mps'] = mps
         data['qubit_hamiltonian'] = 0
@@ -52,7 +77,7 @@ if __name__ == "__main__":
                              qtn.MPS_rand_state(L=16, bond_dim=4)*0*1j)
         data['qubit_hamiltonian'] = 0.
         
-    
+            
     if mps_type in ['P4','N2','heisenberg']:
         filenames = {'P4': 'test_data/P4_6-31G_dist2.0000.pkl', 
                      'N2': 'test_data/N2_STO-6G_dist2.0000.pkl',
@@ -61,75 +86,59 @@ if __name__ == "__main__":
         with open(filenames[mps_type], 'rb') as f:
             data = pkl.load(f)
         
-        
+                
     target_mps = data['quimb_mps']
     qubit_hamiltonian = data['qubit_hamiltonian']
     target_mps.permute_arrays(shape='lpr')
     target_mps.compress('right')
     L = target_mps.L
     
-    for preparation_method in ['LCU+autodiff']:#['SeqU']:#['SeqU+autodiff']:#['LCU+autodiff']:#['SeqU', 'SeqU+autodiff', 'LCU', 'LCU+autodiff']:
+    for preparation_method in ['SeqU+autodiff']:#['SeqU']:#['LCU+autodiff']:#['LCU+autodiff']:#['SeqU', 'SeqU+autodiff', 'LCU', 'LCU+autodiff']:
         
-        if preparation_method=='SeqU':
-            italic_D_sequ = 24
-            preparation_data = generate_sequ_for_mps(target_mps, qubit_hamiltonian, italic_D_sequ, do_compression=True, max_bond_dim=64, verbose=False)
+        if 'SeqU' in preparation_method:
+            italic_D_sequ = 4            
+            preparation_data = generate_sequ_for_mps(target_mps,
+                                                     italic_D_sequ, 
+                                                     do_compression=True, 
+                                                     max_bond_dim=64, 
+                                                     verbose=False, 
+                                                     qubit_hamiltonian=qubit_hamiltonian)
+            
             unitaries = preparation_data['unitaries']
-            
-            encoded_mps = apply_unitary_layers_on_wfn(unitaries, cl_zero_mps(L))
+            encoded_mps = tsp.apply_unitary_layers_on_wfn(unitaries, tsp_hr.cl_zero_mps(L))
             encoded_mps.right_canonize(normalize=True)
-            quimb_overlap = norm_mps_ovrlap(encoded_mps, target_mps)
+            quimb_overlap = tsp_hr.norm_mps_ovrlap(encoded_mps, target_mps)
             print('SeqU - overlaps:',  preparation_data['overlaps'][-1], quimb_overlap - preparation_data['overlaps'][-1] )
-
-
-        if preparation_method=='SeqU+autodiff':
-            italic_D_sequ = 4
-            preparation_data = generate_sequ_for_mps(target_mps, qubit_hamiltonian, italic_D_sequ, do_compression=False, verbose=False)
-            unitaries = preparation_data['unitaries']
-            
-            encoded_mps = apply_unitary_layers_on_wfn(unitaries, cl_zero_mps(L))
-            encoded_mps.right_canonize(normalize=True)
-            quimb_overlap = norm_mps_ovrlap(encoded_mps, target_mps)
-            print('SeqU - overlaps:',  preparation_data['overlaps'][-1], quimb_overlap - preparation_data['overlaps'][-1] )
-            
-            # from untitled1 import sequ_unitary_circuit_optimization 
-            # sequ_unitary_circuit_optimization(target_mps, unitaries)
+                  
+        if 'SeqU+autodiff' in preparation_method:            
             optimized_unitary = sequ_unitary_circuit_optimization(target_mps, unitaries)
             
 
-        if preparation_method=='LCU':
-            italic_D_lcu = 24
-            preparation_data = generate_lcu_for_mps( target_mps, qubit_hamiltonian, italic_D_lcu, do_compression=True, verbose=False)
-            
-            kappas, unitaries = preparation_data['kappas'], preparation_data['unitaries']
-            
-            zero_wfn = cl_zero_mps(L)
-            lcu_mps = [apply_unitary_layers_on_wfn(curr_us, zero_wfn) for curr_us in unitaries]
-            
-            encoded_mps = cl_zero_mps(L)*0
-            for kappa, curr_mps in zip(kappas, lcu_mps):
-                encoded_mps = encoded_mps + kappa*curr_mps
-            encoded_mps.right_canonize(normalize=True)
-            quimb_overlap = norm_mps_ovrlap(encoded_mps, target_mps)
-            print('LCU - overlap:', preparation_data['overlaps'][-1],  quimb_overlap - preparation_data['overlaps'][-1] )
-            
-            
-        if preparation_method=='LCU+autodiff':
+
+        if 'LCU' in preparation_method:
             italic_D_lcu = 4
-            preparation_data = generate_lcu_for_mps( target_mps, qubit_hamiltonian, italic_D_lcu, do_compression=True, verbose=False)        
+
+            preparation_data = generate_lcu_for_mps(target_mps, 
+                                                    italic_D_lcu, 
+                                                    do_compression=False, 
+                                                    qubit_hamiltonian=qubit_hamiltonian, 
+                                                    verbose=False)
             
             kappas, unitaries = preparation_data['kappas'], preparation_data['unitaries']
             
-            zero_wfn = cl_zero_mps(L)
-            lcu_mps = [apply_unitary_layers_on_wfn(curr_us, zero_wfn) for curr_us in unitaries]
+            zero_wfn = tsp_hr.cl_zero_mps(L)
+            lcu_mps = [tsp.apply_unitary_layers_on_wfn(curr_us, zero_wfn) for curr_us in unitaries]
             
-            encoded_mps = cl_zero_mps(L)*0
+            encoded_mps = tsp_hr.cl_zero_mps(L)*0
             for kappa, curr_mps in zip(kappas, lcu_mps):
                 encoded_mps = encoded_mps + kappa*curr_mps
             encoded_mps.right_canonize(normalize=True)
-            quimb_overlap = norm_mps_ovrlap(encoded_mps, target_mps)
+            quimb_overlap = tsp_hr.norm_mps_ovrlap(encoded_mps, target_mps)
             print('LCU - overlap:', preparation_data['overlaps'][-1],  quimb_overlap - preparation_data['overlaps'][-1] )
             
-            # lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps)
+            
+        if 'LCU+autodiff' in preparation_method:            
+            lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps)
             
             pkl.dump([target_mps, kappas, lcu_mps], open('temp_dump.pkl', "wb"))
             
