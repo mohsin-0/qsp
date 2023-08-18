@@ -3,7 +3,9 @@
 import numpy as np
 import scipy as sp
 
+
 from ncon import ncon
+import quimb.tensor as qtn
 
 import tsp_helper_routines as tsp_hr
 
@@ -22,7 +24,34 @@ pauli_z = np.array(pauli_z)
 I = pauli_z@pauli_z
 
 
-def make_bell_pair_1d_mps(L):
+def make_splitted_mps(tens):
+    splitted_tens = []
+    for indx, ten in enumerate(tens):
+        if indx==0:
+            ten = qtn.Tensor(ten.reshape((2, 2,2)), inds=('vr','pl','pr') )
+            tn = ten.split(('pl'), bond_ind='v0')
+            ten0 = (tn.tensor_map[0]).transpose(*('v0', 'pl'))
+            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
+            
+            
+        elif indx==(len(tens)-1):
+            ten = qtn.Tensor(ten.reshape((2, 2,2)), inds=('vl','pl','pr') )
+            tn = ten.split(('vl','pl'), bond_ind='v0')
+            ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
+            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'pr'))
+            
+        else:
+            ten = qtn.Tensor(ten.reshape((2,2, 2,2)), inds=('vl','vr','pl','pr') )
+            tn = ten.split(('vl','pl'), bond_ind='v0')
+            ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
+            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
+        
+        splitted_tens.append(ten0.data)
+        splitted_tens.append(ten1.data)
+    return splitted_tens
+
+
+def make_bell_pair_mps(L):
     bell_tensor = (np.eye(4)).reshape([2,2,4])
 
     bell_tens = [bell_tensor] * L
@@ -32,7 +61,7 @@ def make_bell_pair_1d_mps(L):
     return bell_tens
     
 
-def make_aklt_1d_mps(L):
+def make_aklt_mps(L):
     s_ttl = {}
     for p, label in zip([pauli_x, pauli_y, pauli_z], ["x", "y", "z"]):
         tmp = 0
@@ -98,14 +127,14 @@ def make_aklt_1d_mps(L):
     return aklt_tens, onsite_isometries
     
 
-def make_bell_2d_peps(Lx, Ly):
+def make_bell_peps(Lx, Ly):
     bell_tensor = (np.eye(16)).reshape((2,2,2,2, 16))
     
-    tensor_grid, bonds = tsp_hr.construct_tensor_grid(bell_tensor, Lx, Ly)
+    tensor_grid, bonds = construct_tensor_grid(bell_tensor, Lx, Ly)
     return tensor_grid, bonds
 
 
-def make_aklt_2d_peps(Lx, Ly):
+def make_aklt_peps(Lx, Ly):
     s_ttl = {}
     for p, label in zip([pauli_x, pauli_y, pauli_z], ["x", "y", "z"]):
         tmp = 0
@@ -139,5 +168,50 @@ def make_aklt_2d_peps(Lx, Ly):
     aklt_tensor = ncon( (proj_symm, singlet, singlet), 
                            [(-1, -2, 3, 4, -5), (-3, 3), (-4, 4)])
 
-    tensor_grid, bonds = tsp_hr.construct_tensor_grid(aklt_tensor, Lx, Ly)
+    tensor_grid, bonds = construct_tensor_grid(aklt_tensor, Lx, Ly)
+    return tensor_grid, bonds
+
+
+def construct_tensor_grid(local_tensor, Lx, Ly):
+    pt2num = {(x, y): Lx * y + x for y in range(Ly) for x in range(Lx)}
+    
+    tensor_grid = []
+    bonds = set()
+    for y in range(Ly):
+        tensor_row = []
+        for x in range(Lx):
+
+            if x < (Lx - 1):
+                bonds.add((pt2num[(x, y)], pt2num[(x + 1, y)], "H"))
+
+            if y < (Ly - 1):
+                bonds.add((pt2num[(x, y)], pt2num[(x, y + 1)], "V"))
+
+            tensor = local_tensor.copy()
+            bdry = []
+            if x == 0:
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
+                              [(1, -2, -3, -4, -5), (1, -1)])
+                bdry.append("L")
+
+            if x == (Lx - 1):
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
+                              [(-1, -2, 3, -4, -5), (3, -3)])
+                bdry.append("R")
+
+            if y == 0:
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
+                              [(-1, 2, -3, -4, -5), (2, -2)])
+                bdry.append("B")
+
+            if y == (Ly - 1):
+                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
+                              [(-1, -2, -3, 4, -5), (4, -4)])
+                bdry.append("T")
+
+            tensor_row.append(tensor)  # .squeeze())
+
+            # print(f'({x},{y}), {bdry}')
+        tensor_grid.append(tensor_row)
+
     return tensor_grid, bonds

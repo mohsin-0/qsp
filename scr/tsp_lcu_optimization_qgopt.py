@@ -231,23 +231,8 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
     lcu_isometry_list = list(map(qgo.manifolds.complex_to_real, lcu_isometry_list)) 
     lcu_isometry_list_var = list(map(tf.Variable, lcu_isometry_list))
     shape_structure = [t.shape for t in lcu_isometry_list]
-
-    # the optimization is not good as it is not over the stieffel manifold
-    # def func(x):
-    #     lcu_list = x_to_tf_lcu_list(x, shape_structure)
-    #     overlap, grad = value_and_gradient(lcu_list, kappas)        
-    #     grad = lcu_list_to_x(lcu_isometry_list_var, shape_structure).reshape(-1,1)
-    #     print('..')
-    #     return overlap.numpy().astype(np.float64), grad
     
-    # resdd= sopt.minimize(fun=func,  
-    #                       x0=lcu_list_to_x(lcu_isometry_list_var, shape_structure),
-    #                       jac=True, 
-    #                       method='L-BFGS-B', 
-    #                       options={'disp': True})
-    
-    no_of_layers, L = len(lcu_mps), target_mps.L
-    
+    no_of_layers, L = len(lcu_mps), target_mps.L    
     overlaps_list = []
     for j in tqdm(range(iters)):
         # overlap, grad = value_and_gradient(lcu_isometry_list_var, kappas)

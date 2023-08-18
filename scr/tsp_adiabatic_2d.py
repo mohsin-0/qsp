@@ -8,9 +8,6 @@ import quimb as qu
 import quimb.tensor as qtn
 from tqdm import tqdm
 
-from aklt_tensor_network import make_aklt_2d_peps, make_bell_2d_peps
-
-
 def construct_parent_hamiltonian(tensor_grid, bonds, Lx, Ly, phy_dim):
     d=phy_dim
     
@@ -71,12 +68,12 @@ def linear_interpolation(s, target_grid, initial_grid):
     return tensor_grid
 
 
-def adiabatic_state_preparation_1d(target_grid, bonds, Lx, Ly, Tmax, tau, phy_dim, max_bond, s_func):
+def adiabatic_state_preparation_2d(target_grid, initial_grid, bonds, 
+                                   Lx, Ly, Tmax, tau, phy_dim, max_bond, s_func):
 
     target_peps = qtn.PEPS(target_grid, shape="ldrup")
     target_peps.normalize(inplace=True)
     
-    initial_grid, _ = make_bell_2d_peps(Lx, Ly)
     peps = qtn.PEPS(initial_grid, shape="ldrup")
     peps.normalize(inplace=True)
     
@@ -109,8 +106,12 @@ def main():
     s_func = lambda t: np.sin( (np.pi/2)*t/Tmax)**2
     # s_func = lambda t: t/Tmax
     
-    target_grid, bonds = make_aklt_2d_peps(Lx, Ly)
-    adiabatic_state_preparation_1d(target_grid, bonds, Lx, Ly, Tmax, tau, phy_dim, max_bond, s_func)
+    from tsp_misc_tns import make_aklt_peps, make_bell_peps
+    target_grid, bonds = make_aklt_peps(Lx, Ly)
+    initial_grid, _ = make_bell_peps(Lx, Ly)
+    
+    adiabatic_state_preparation_2d(target_grid, initial_grid, bonds, 
+                                   Lx, Ly, Tmax, tau, phy_dim, max_bond, s_func)
 
 
 if __name__ == "__main__":

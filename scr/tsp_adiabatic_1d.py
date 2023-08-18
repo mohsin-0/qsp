@@ -10,9 +10,6 @@ import quimb.tensor as qtn
 import quimb as qu
 from tqdm import tqdm
 
-from aklt_tensor_network import make_aklt_1d_mps, make_bell_pair_1d_mps
-
-
 def make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True):
     d = phy_dim
     
@@ -123,25 +120,28 @@ def calculate_energy_from_parent_hamiltonian_mpo(mps, H_mpo):
     return exp_val
 
 
-def adiabatic_state_preparation_1d(target_tens, Tmax, tau, s_func, phy_dim, max_bond):
-    L = len(target_tens)
+def adiabatic_state_preparation_1d(target_mps, initial_mps, 
+                                   Tmax, tau, s_func, max_bond):
+    L = target_mps.L
+    phy_dim = target_mps.phys_dim()
     
-    target_mps = qtn.MatrixProductState(target_tens, shape='lrp')
-    target_mps.normalize()
-    initial_tens = make_bell_pair_1d_mps(L=L)
+    target_mps.permute_arrays(shape='lrp')
+    target_mps.normalize()      #inplace
+    
+    initial_mps.permute_arrays(shape='lrp')
+    initial_mps.normalize()
     
     ts = np.arange(0, Tmax+tau, tau)
-
     ss, energy, target_fidelity, current_fidelity  = {}, {}, {}, {}
     
-    psi = qtn.MatrixProductState(initial_tens, shape='lrp')
-    psi.normalize()    #inplace
+    
+    psi = initial_mps
     for t in tqdm(ts):
         s = s_func(t)
         
         Qs = [0]*L
-        for site, (initial, target) in  enumerate(zip(initial_tens, target_tens)):
-            Qs[site] = (1 - s)*initial + s*target
+        for site, (initial, target) in  enumerate(zip(initial_mps, target_mps)):
+            Qs[site] = (1 - s)*initial.data + s*target.data
         
         hamiltonian = constuct_parent_hamiltonian(Qs, L, phy_dim)
         hamiltonian_mpo, _ = make_hamiltonian_mpo(hamiltonian, L, phy_dim, compress=False)
@@ -174,14 +174,12 @@ def adiabatic_state_preparation_1d(target_tens, Tmax, tau, s_func, phy_dim, max_
     data = {'ss': ss,
             'energy': energy,
             'target_fidelity': target_fidelity,
-            'current_fidelity': current_fidelity
-            }
+            'current_fidelity': current_fidelity}
     return data
 
 
 def main():
     L = 8
-    phy_dim = 4
     Tmax, tau = 6, 0.04 #total runtime, trotter step size
     max_bond = 2
     
@@ -190,8 +188,16 @@ def main():
     # s_func = lambda t: t/Tmax
     
     # # ####################################
-    target_tens, _ = make_aklt_1d_mps(L=L)
-    data = adiabatic_state_preparation_1d(target_tens, Tmax, tau, s_func, phy_dim, max_bond)
+    from tsp_misc_tns import make_aklt_mps, make_bell_pair_mps
+    target_tens, _ = make_aklt_mps(L=L)
+    initial_tens   = make_bell_pair_mps(L=L)
+
+    initial_mps = qtn.MatrixProductState(initial_tens, shape='lrp')
+    target_mps = qtn.MatrixProductState(target_tens, shape='lrp')
+
+
+    data = adiabatic_state_preparation_1d(target_mps, initial_mps,
+                                          Tmax, tau, s_func, max_bond)
 
     x, y = data['target_fidelity'].keys(), data['target_fidelity'].values() 
     plt.plot(x, y, '.-')

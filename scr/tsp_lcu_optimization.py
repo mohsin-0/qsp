@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-import quimb.tensor as qtn
-import pickle as pkl
-
 import numpy as np
 import scipy as sp
-import tensorflow as tf
+import tensorflow as tf 
 
-import tensorflow as tf
 import pymanopt
 from pymanopt.manifolds import ComplexGrassmann as Manifold
 from pymanopt.optimizers import TrustRegions, ConjugateGradient, NelderMead
- 
 import tensornetwork as tn
 
-import matplotlib.pyplot as plt
-from tqdm import tqdm
+tn.set_default_backend("tensorflow")
+tf.random.set_seed(42)
+
+NPTYPE = np.complex128
+TFTYPE = tf.complex128
 
 
 def mps_to_isometry_list(tens_list, canonical_form): 
@@ -30,10 +27,12 @@ def mps_to_isometry_list(tens_list, canonical_form):
      
     L = len(tens_list) 
     if canonical_form=='left':
-        isometry_list = [reshape_lft2inds(A) if tid!=0  else A for tid, A in enumerate(tens_list)]
+        isometry_list = [reshape_lft2inds(A) if tid!=0  else A 
+                         for tid, A in enumerate(tens_list)]
         
     if canonical_form=='right':
-        isometry_list = [reshape_rht2inds(A) if tid!=(L-1) else A for tid, A in enumerate(tens_list)]
+        isometry_list = [reshape_rht2inds(A) if tid!=(L-1) else A 
+                         for tid, A in enumerate(tens_list)]
         
     return isometry_list
     
@@ -46,13 +45,16 @@ def canonical_form_sanity_check(tens_list, canonical_form):
         shape = u.shape
         if len(shape)>1: 
             if shape[0]>shape[1]:
-                chks.append(np.allclose(tf.eye(shape[1], dtype=tftype), tf.linalg.adjoint(u)@u))
+                chks.append(np.allclose(tf.eye(shape[1], dtype=TFTYPE), 
+                                        tf.linalg.adjoint(u)@u))
                 
             else:
-                chks.append(np.allclose(tf.eye(shape[0], dtype=tftype), u@tf.linalg.adjoint(u)))
+                chks.append(np.allclose(tf.eye(shape[0], dtype=TFTYPE), 
+                                        u@tf.linalg.adjoint(u)))
                 
         else:
-            chks.append(np.allclose(1., u[tf.newaxis]@tf.linalg.adjoint(u[tf.newaxis])))
+            chks.append(np.allclose(1., 
+                                    u[tf.newaxis]@tf.linalg.adjoint(u[tf.newaxis])))
             
     assert all(chks)==True, 'every u in the list should be an isometry' 
 
@@ -71,15 +73,25 @@ def quimb_mps_to_tf_mps(mps, canonical_form):
     isometry_list = mps_to_isometry_list(tens_list, canonical_form)
     shapes_list = [ten.shape for ten in tens_list]
 
-    isometry_list = [isometry.reshape(-1,1) if len(isometry.shape)==1 else isometry  for isometry in isometry_list]
+    isometry_list = [isometry.reshape(-1,1) if len(isometry.shape)==1 else isometry  
+                     for isometry in isometry_list]
     
     return isometry_list, shapes_list
 
 
 # @tf.function
 def mps_overlap(bra_isom, bra_shapes, ket_isom, ket_shapes):
-    bra_mps = [tf.reshape(A, shape) for A, shape in zip(bra_isom, bra_shapes)]
-    ket_mps = [tf.reshape(tf.math.conj(A), shape) for A, shape in zip(ket_isom, ket_shapes)]
+    bra_mps = [trim_reshape(A, shape) 
+               for A, shape in zip(bra_isom, bra_shapes)]
+    
+    ket_mps = [trim_reshape(tf.math.conj(A), shape) 
+               for A, shape in zip(ket_isom, ket_shapes)]
+    
+    # bra_mps = [tf.reshape(A, shape) 
+    #            for A, shape in zip(bra_isom, bra_shapes)]
+    
+    # ket_mps = [tf.reshape(tf.math.conj(A), shape) 
+    #            for A, shape in zip(ket_isom, ket_shapes)]
     
     L = len(bra_mps)
     co = 1
@@ -108,6 +120,30 @@ def mps_overlap(bra_isom, bra_shapes, ket_isom, ket_shapes):
     return tn.ncon(list_of_tens, list_of_inds)
 
 
+def trim_reshape(ten, new_shape):
+    half_zr = tf.reshape(tf.convert_to_tensor([1., 0.], dtype=TFTYPE), shape=(-1,1))
+    
+    # if ten.shape==(2,2) and new_shape==(2,1):
+    #     return tf.reshape(ten@half_zr, new_shape)
+    
+    # if ten.shape==(4,2) and new_shape==(1,2,1):
+    #     return tf.reshape(tf.transpose(half_zr,(1,0))@tf.reshape(ten@half_zr, [2,2]), new_shape) 
+    
+    # if ten.shape==(4,2) and new_shape==(1,2,2):
+    #     return tf.reshape(tf.transpose(half_zr,(1,0))@tf.reshape(ten, [2,4]), new_shape)
+        
+    # if ten.shape==(4,2) and new_shape==(2,2,1):
+    #     return tf.reshape(tf.reshape(ten, [2,2,2])@half_zr, new_shape)
+            
+    
+    # if ten.shape==(4,1) and new_shape==(1,2):
+    #     return tf.reshape(tf.transpose(half_zr,(1,0))@tf.reshape(ten, [2,2]), new_shape)
+        
+    
+    return tf.reshape(ten, new_shape)
+        
+
+
 # @tf.function
 def compute_overlap(lcu_list_var, lcu_shapes_list, 
                     target_isometry_list, target_shapes_list, 
@@ -115,29 +151,28 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
                     no_of_layers, L, 
                     half_id, half_zr):
 
-
     nomin = 0.    
     for it in range(no_of_layers):
         kappa  = kappas[it]
-        curr_mps = [lcu_list_var[indx,:,:] for indx in range(it*L,(it+1)*L)]#lcu_list_var[it*L:(it+1)*L]
-        
+        curr_mps = [lcu_list_var[indx,:,:] for indx in range(it*L,(it+1)*L)]
 
         curr_mps_shapes = lcu_shapes_list[it*L:(it+1)*L]
+        
                 
         curr_mps[ 0] = half_id@curr_mps[ 0]
         curr_mps[-1] = curr_mps[-1]@half_zr
         
         # with and without kappa, the optimal answer is same
-        nomin = nomin + kappa * mps_overlap(curr_mps, curr_mps_shapes,
-                                            target_isometry_list, target_shapes_list)
+        nomin = nomin + kappa * mps_overlap(curr_mps, 
+                                            curr_mps_shapes,
+                                            target_isometry_list, 
+                                            target_shapes_list)
 
-    # return -tf.cast(nomin, dtype=tf.float64)
 
-    
     denomin = 0.    
     for it1 in range(no_of_layers):
         kappa1  = kappas[it1]
-        curr_mps1 = [lcu_list_var[indx,:,:] for indx in range(it1*L,(it1+1)*L)]#lcu_list_var[it1*L:(it1+1)*L]
+        curr_mps1 = [lcu_list_var[indx,:,:] for indx in range(it1*L,(it1+1)*L)]
         curr_mps_shapes1 = lcu_shapes_list[it1*L:(it1+1)*L]
         
         curr_mps1[ 0] = half_id@curr_mps1[ 0]
@@ -145,7 +180,7 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
         
         for it2 in range(no_of_layers):
             kappa2  = kappas[it2]
-            curr_mps2 = [lcu_list_var[indx,:,:] for indx in range(it2*L,(it2+1)*L)]#lcu_list_var[it2*L:(it2+1)*L]
+            curr_mps2 = [lcu_list_var[indx,:,:] for indx in range(it2*L,(it2+1)*L)]
             curr_mps_shapes2 = lcu_shapes_list[it2*L:(it2+1)*L]
             
             curr_mps2[ 0] = half_id@curr_mps2[ 0]
@@ -156,7 +191,7 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
         
 
     overlap = tf.math.abs(nomin/tf.math.sqrt(denomin))
-    overlap = 1-tf.cast(overlap, dtype=tf.float64)
+    overlap = 1-overlap#tf.cast(overlap, dtype=tf.float64)
     print(1-overlap)
     
     return overlap
@@ -164,21 +199,17 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
     
 
 def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps): 
-    tn.set_default_backend("tensorflow")
-    tf.random.set_seed(42)
+
+    half_id = tf.convert_to_tensor([[1., 0., 0., 0.],[0., 1., 0., 0.]], dtype=TFTYPE)
+    half_zr = tf.reshape(tf.convert_to_tensor([1., 0.], dtype=TFTYPE), shape=(-1,1))
     
-    iters = 1 # number of iterations
-    
-    half_id = tf.convert_to_tensor([[1., 0., 0., 0.],[0., 1., 0., 0.]], dtype=tftype)
-    half_zr = tf.reshape(tf.convert_to_tensor([1., 0.], dtype=tftype), shape=(-1,1))
-    
-    kappas = np.array(kappas, dtype=nptype)
+    kappas = np.array(kappas, dtype=NPTYPE)
     kappas = [kappa.tolist() for kappa in kappas]
     kappas = tf.Variable(kappas)
 
     target_isometry_list, target_shapes_list = quimb_mps_to_tf_mps(target_mps, canonical_form='left')
     target_isometry_list = list(map(tf.constant, target_isometry_list)) 
-    target_isometry_list = list(map(lambda x: tf.cast(x, dtype=tftype), target_isometry_list))
+    target_isometry_list = list(map(lambda x: tf.cast(x, dtype=TFTYPE), target_isometry_list))
     
     lcu_isometry_list = []
     lcu_shapes_list = []
@@ -186,29 +217,36 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
         isometry_list, shapes_list = quimb_mps_to_tf_mps(mps, canonical_form='left')
         for shape, isometry in zip(shapes_list, isometry_list):
             
-            if isometry.shape==(4,1):                
+            if isometry.shape==(4,1): # eng 
                 isometry = np.array([isometry, sp.linalg.null_space(isometry.T)[:,0].reshape(-1,1)]).squeeze().T
     
-            elif isometry.shape==(2,2):
-                temp = np.zeros((4,2),dtype=nptype)
+            elif isometry.shape==(2,2): # beginning
+                temp = np.zeros((4,2),dtype=NPTYPE)
                 temp[:2,:2] = isometry
                 isometry = temp
-                                
+            
+    
             lcu_shapes_list.append(shape)
             lcu_isometry_list.append(isometry)
     
     
     no_of_layers, L = len(lcu_mps), target_mps.L
     
-    tensor = np.zeros((no_of_layers*L, 4,2), dtype=nptype)
+    tensor = np.zeros((no_of_layers*L, 4,2), dtype=NPTYPE)
     for it, isometry in enumerate(lcu_isometry_list):
         tensor[it,:,:] = isometry    
-    tensor = tf.convert_to_tensor(tensor, dtype=tftype)
+    tensor = tf.convert_to_tensor(tensor, dtype=TFTYPE)
     
-    overlaps_list = []
     
     manifold = Manifold(4, 2, k=no_of_layers*L)
     euclidean_gradient = euclidean_hessian = None
+    
+    
+    compute_overlap(tensor, lcu_shapes_list, 
+                           target_isometry_list, target_shapes_list, 
+                           kappas, 
+                           no_of_layers, L,
+                           half_id, half_zr)
     
     @pymanopt.function.tensorflow(manifold)
     def loss(x):
@@ -235,8 +273,6 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
     estimated_spanning_set = optimizer.run( problem, initial_point=tensor, ).point
     # optimizer = NelderMead()
     
-    
-
         
     # for j in tqdm(range(iters)):        
     #     overlap = loss(tensor)
@@ -257,12 +293,6 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
     
     
 if __name__ == "__main__":
+    pass
     
-    with open('temp_dump.pkl', 'rb') as f:
-        [target_mps, kappas, lcu_mps] = pkl.load(f)
     
-    nptype = np.complex128
-    tftype = tf.complex128
-    
-    lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps)
-    #-0.96638331388201426

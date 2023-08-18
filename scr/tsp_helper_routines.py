@@ -1,55 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-from ncon import ncon
-
 import quimb as qu
 import quimb.tensor as qtn
-
-
-def construct_tensor_grid(local_tensor, Lx, Ly):
-    pt2num = {(x, y): Lx * y + x for y in range(Ly) for x in range(Lx)}
-    
-    tensor_grid = []
-    bonds = set()
-    for y in range(Ly):
-        tensor_row = []
-        for x in range(Lx):
-
-            if x < (Lx - 1):
-                bonds.add((pt2num[(x, y)], pt2num[(x + 1, y)], "H"))
-
-            if y < (Ly - 1):
-                bonds.add((pt2num[(x, y)], pt2num[(x, y + 1)], "V"))
-
-            tensor = local_tensor.copy()
-            bdry = []
-            if x == 0:
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
-                              [(1, -2, -3, -4, -5), (1, -1)])
-                bdry.append("L")
-
-            if x == (Lx - 1):
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
-                              [(-1, -2, 3, -4, -5), (3, -3)])
-                bdry.append("R")
-
-            if y == 0:
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
-                              [(-1, 2, -3, -4, -5), (2, -2)])
-                bdry.append("B")
-
-            if y == (Ly - 1):
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
-                              [(-1, -2, -3, 4, -5), (4, -4)])
-                bdry.append("T")
-
-            tensor_row.append(tensor)  # .squeeze())
-
-            # print(f'({x},{y}), {bdry}')
-        tensor_grid.append(tensor_row)
-
-    return tensor_grid, bonds
 
 
 def compute_energy_expval(psi, qubit_hamiltonian):
@@ -72,6 +25,7 @@ def compute_energy_expval(psi, qubit_hamiltonian):
             # print(f'{indx_top}_{nrgy}')
     
     return np.real(nrgy[0])
+
 
 def cl_zero_mps(L):
     A = np.zeros((1,2,1), dtype=np.complex128)
@@ -98,9 +52,6 @@ def unitaries_specs(Gs_lst):
             depth = curr_depth
             
     return depth, gate_count
-
-
-
 
 
 def unitaries_sanity_check(Gs_list):
