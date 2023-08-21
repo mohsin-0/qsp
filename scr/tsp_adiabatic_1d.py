@@ -121,7 +121,7 @@ def calculate_energy_from_parent_hamiltonian_mpo(mps, H_mpo):
 
 
 def adiabatic_state_preparation_1d(target_mps, initial_mps, 
-                                   Tmax, tau, s_func, max_bond):
+                                   Tmax, tau, s_func, max_bond, verbose=False):
     L = target_mps.L
     phy_dim = target_mps.phys_dim()
     
@@ -167,9 +167,11 @@ def adiabatic_state_preparation_1d(target_mps, initial_mps,
         energy[t] = np.real(calculate_energy_from_parent_hamiltonian_mpo(psi, hamiltonian_mpo))
         target_fidelity[t]  = np.abs( ((target_mps.H & psi)^all) )
         current_fidelity[t] = np.abs( ((     mps_s.H & psi)^all) ) 
-        
-    print(f"\n{t=:.2f}, {s=:.4f}, e={energy[t]:.4f}, f={target_fidelity[t]:.8f}, curr_f={current_fidelity[t]:.8f}\n")
-        
+    
+        if verbose:
+            print(f"\n{t=:.2f}, {s=:.4f}, e={energy[t]:.4f}, "
+                  f"f={target_fidelity[t]:.8f}, curr_f={current_fidelity[t]:.8f}\n")
+
     ###################################
     data = {'ss': ss,
             'energy': energy,
@@ -198,7 +200,14 @@ def main():
 
     data = adiabatic_state_preparation_1d(target_mps, initial_mps,
                                           Tmax, tau, s_func, max_bond)
-
+    
+    
+    t_last = max(data['ss'].keys())    
+    s, e = data['ss'][t_last], data['energy'][t_last]
+    curr_f, tar_f = data['current_fidelity'][t_last], data['target_fidelity'][t_last],
+    print(f"\nfinal overlap is {s=:.5f}, e={e:.08f}, "
+          f"curr_f={curr_f:.08f}, target_fid={tar_f:.08f}\n")
+    
     x, y = data['target_fidelity'].keys(), data['target_fidelity'].values() 
     plt.plot(x, y, '.-')
     

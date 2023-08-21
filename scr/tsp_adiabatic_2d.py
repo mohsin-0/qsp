@@ -69,7 +69,9 @@ def linear_interpolation(s, target_grid, initial_grid):
 
 
 def adiabatic_state_preparation_2d(target_grid, initial_grid, bonds, 
-                                   Lx, Ly, Tmax, tau, phy_dim, max_bond, s_func):
+                               Lx, Ly, phy_dim, 
+                               Tmax, tau, max_bond, s_func, 
+                               verbose=False):
 
     target_peps = qtn.PEPS(target_grid, shape="ldrup")
     target_peps.normalize(inplace=True)
@@ -79,7 +81,7 @@ def adiabatic_state_preparation_2d(target_grid, initial_grid, bonds,
     
     ts = np.arange(0, Tmax + tau, tau)
 
-    ss, target_fidelity = {}, {}
+    ss, target_fidelity, energy = {}, {}, {} 
     for t in tqdm(ts):
         s = s_func(t)
         tensor_grid = linear_interpolation(s, target_grid, initial_grid)
@@ -88,12 +90,18 @@ def adiabatic_state_preparation_2d(target_grid, initial_grid, bonds,
         apply_evolution_operator(hamiltonian, peps, tau, Tmax, max_bond, phy_dim)
         peps.normalize(inplace=True)
         
-        exp_val = np.real(peps.compute_local_expectation(hamiltonian.terms))
-        
+    
         ss[t] = s
         target_fidelity[t] = np.abs(peps.H @ target_peps)  
-        print(f"\n{t=:.2f}, {s=:.5f}, e={exp_val:.08f}, f={target_fidelity[t]:.08f}\n")
-        
+        energy[t] = np.real(peps.compute_local_expectation(hamiltonian.terms))
+        if verbose:
+            print(f"\n{t=:.2f}, {s=:.5f}, e={energy[t]:.08f}, f={target_fidelity[t]:.08f}\n")
+    
+    data = {'ss': ss,
+            'target_fidelity': target_fidelity,
+            'energy': energy}
+    
+    return data            
     
 
 def main():
@@ -110,9 +118,14 @@ def main():
     target_grid, bonds = make_aklt_peps(Lx, Ly)
     initial_grid, _ = make_bell_peps(Lx, Ly)
     
-    adiabatic_state_preparation_2d(target_grid, initial_grid, bonds, 
-                                   Lx, Ly, Tmax, tau, phy_dim, max_bond, s_func)
+    data = adiabatic_state_preparation_2d(target_grid, initial_grid, bonds, 
+                                          Lx, Ly, phy_dim, 
+                                          Tmax, tau, max_bond, s_func)
 
+
+    t_last = max(data['ss'].keys())    
+    s, e, f = data['ss'][t_last], data['energy'][t_last], data['target_fidelity'][t_last]
+    print(f"\nfinal overlap is {s=:.5f}, e={e:.08f}, f={f:.08f}\n")
 
 if __name__ == "__main__":
     main()

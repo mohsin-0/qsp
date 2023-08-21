@@ -12,12 +12,42 @@ from tsp_lcu_optimization import lcu_unitary_circuit_optimization
 from tsp_qctn import quantum_circuit_tensor_network_ansatz
 
 from tsp_adiabatic_1d import adiabatic_state_preparation_1d
+from tsp_adiabatic_2d import adiabatic_state_preparation_2d
+
 from tsp_misc_tns import make_bell_pair_mps
+from tsp_misc_tns import make_bell_peps
+
 
 class PEPSPreparation():
-    pass
-
-
+    def __init__(self, tensor_grid, shape='ldrup', qubit_hamiltonian=0):
+        self.target_grid = tensor_grid
+        self.shape = shape
+        self.qubit_hamiltonian = qubit_hamiltonian
+        
+        self.Lx, self.Ly = len(tensor_grid[0]), len(tensor_grid)
+        self.phy_dim = tensor_grid[0][0].shape[-1]
+            
+        
+    def adiabatic_state_preparation(self, Tmax, tau, max_bond, verbose=False):        
+        # s_func = lambda t: np.sin( (np.pi/2)*np.sin( (np.pi/2)*t/Tmax )**2 )**2
+        s_func = lambda t: np.sin( (np.pi/2)*t/Tmax)**2
+        # s_func = lambda t: t/Tmax
+        
+        # target_grid, bonds = make_aklt_peps(Lx, Ly)
+        initial_grid, bonds = make_bell_peps(self.Lx, self.Ly)
+        
+        data = adiabatic_state_preparation_2d(self.target_grid, 
+                                       initial_grid, bonds, 
+                                       self.Lx, self.Ly, self.phy_dim, 
+                                       Tmax, tau, max_bond, s_func, 
+                                       verbose=verbose)
+        self.adiabatic_data = data
+        
+        t_last = max(data['ss'].keys())
+        s, e, f = data['ss'][t_last], data['energy'][t_last], data['target_fidelity'][t_last]
+        print(f"\n2d adiabatic preparation: @ {s=:.5f}, e={e:.08f} and f={f:.08f}\n")
+        
+            
 class MPSPreparation():
     def __init__(self, tensor_array, shape='lrp', qubit_hamiltonian=0):
         
@@ -102,22 +132,23 @@ class MPSPreparation():
         quantum_circuit_tensor_network_ansatz(self.target_mps, depth)
     
             
-    def adiabatic_state_preparation(self):
-        L = 8
-        Tmax, tau = 6, 0.04 #total runtime, trotter step size
-        max_bond = 2
+    def adiabatic_state_preparation(self, Tmax, tau, max_bond, verbose=False):
         
         s_func = lambda t: np.sin( (np.pi/2)*np.sin( (np.pi/2)*t/Tmax )**2 )**2
         # s_func = lambda t: np.sin( (np.pi/2)*t/Tmax)**2
         # s_func = lambda t: t/Tmax
         
         # # ####################################        
-        initial_tens   = make_bell_pair_mps(L=L)
+        initial_tens   = make_bell_pair_mps(L=self.L)
         initial_mps = qtn.MatrixProductState(initial_tens, shape='lrp')
         
-        self.adiabatic_data = adiabatic_state_preparation_1d(self.target_mps, 
-                                                             initial_mps, 
-                                                             Tmax, tau, s_func, 
-                                                             max_bond)
-
+        data = adiabatic_state_preparation_1d(self.target_mps, initial_mps, 
+                                              Tmax, tau, s_func, max_bond, verbose=verbose)
+        
+        self.adiabatic_data = data
+        t_last = max(data['ss'].keys())    
+        s, e = data['ss'][t_last], data['energy'][t_last]
+        curr_f, tar_f = data['current_fidelity'][t_last], data['target_fidelity'][t_last],
+        print(f"final overlap @ {s=:.5f} is e={e:.08f}, "
+              f"curr_f={curr_f:.08f}, and target_fid={tar_f:.08f}\n")
         
