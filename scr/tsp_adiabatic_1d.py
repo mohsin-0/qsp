@@ -11,6 +11,8 @@ import quimb as qu
 from tqdm import tqdm
 
 def make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True):
+    
+    gates = []
     d = phy_dim
     
     # mpo for applying gates from left to right
@@ -22,6 +24,9 @@ def make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True):
         
         mpo_tens[bond[0]].append(u.reshape(d,d,-1))   
         mpo_tens[bond[1]].append(v.reshape((-1,d,d))) # first comes v and then u
+        
+        gates.append([bond, evo_op])
+        
 
     for indx in range(L):   # run over all the sites
         if indx==0:
@@ -46,6 +51,8 @@ def make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True):
         
         mpo_tens[bond[0]].append(u.reshape(d,d,-1))   # first comes u and then u
         mpo_tens[bond[1]].append(v.reshape((-1,d,d))) 
+        
+        gates.append([bond, evo_op])
     
     for indx in range(L):   # run over all the sites
         if indx==0:
@@ -64,7 +71,7 @@ def make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True):
         mpo_1.compress(cutoff=1e-12, cutoff_mode="sum2")
         mpo_2.compress(cutoff=1e-12, cutoff_mode="sum2")
     
-    return mpo_1, mpo_2
+    return mpo_1, mpo_2, gates
 
 
 def make_hamiltonian_mpo(hamiltonian, L, phy_dim, compress=False):
@@ -133,7 +140,7 @@ def adiabatic_state_preparation_1d(target_mps, initial_mps,
     
     ts = np.arange(0, Tmax+tau, tau)
     ss, energy, target_fidelity, current_fidelity  = {}, {}, {}, {}
-    
+    gates = {}
     
     psi = initial_mps
     for t in tqdm(ts):
@@ -145,7 +152,7 @@ def adiabatic_state_preparation_1d(target_mps, initial_mps,
         
         hamiltonian = constuct_parent_hamiltonian(Qs, L, phy_dim)
         hamiltonian_mpo, _ = make_hamiltonian_mpo(hamiltonian, L, phy_dim, compress=False)
-        mpo_lr, mpo_rl = make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True)
+        mpo_lr, mpo_rl, gates_curr = make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True)
                          
         mps_s = qtn.MatrixProductState(Qs, shape='lrp')
         mps_s.normalize()
@@ -167,16 +174,20 @@ def adiabatic_state_preparation_1d(target_mps, initial_mps,
         energy[t] = np.real(calculate_energy_from_parent_hamiltonian_mpo(psi, hamiltonian_mpo))
         target_fidelity[t]  = np.abs( ((target_mps.H & psi)^all) )
         current_fidelity[t] = np.abs( ((     mps_s.H & psi)^all) ) 
+        gates[t] = gates_curr
     
         if verbose:
             print(f"\n{t=:.2f}, {s=:.4f}, e={energy[t]:.4f}, "
                   f"f={target_fidelity[t]:.8f}, curr_f={current_fidelity[t]:.8f}\n")
+            
+        
 
     ###################################
     data = {'ss': ss,
             'energy': energy,
             'target_fidelity': target_fidelity,
-            'current_fidelity': current_fidelity}
+            'current_fidelity': current_fidelity,
+            'gates': gates}
     return data
 
 
@@ -192,7 +203,7 @@ def main():
     # # ####################################
     from tsp_misc_tns import make_aklt_mps, make_bell_pair_mps
     target_tens, _ = make_aklt_mps(L=L)
-    initial_tens   = make_bell_pair_mps(L=L)
+    initial_tens   = make_bell_pair_mps(L=L, phys_dim=4)
 
     initial_mps = qtn.MatrixProductState(initial_tens, shape='lrp')
     target_mps = qtn.MatrixProductState(target_tens, shape='lrp')

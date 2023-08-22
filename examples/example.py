@@ -36,7 +36,7 @@ if __name__ == "__main__":
         
 
     if mps_type == 'random':
-        L = 32
+        L = 16
         target_mps = qtn.MPS_rand_state(L=L, bond_dim=2)
         target_mps.permute_arrays(shape='lrp')
         
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     
     #### 1d adiabatic state preparation - aklt
     # L=8
-    tensor_array, _ = make_aklt_mps(L)
+    # tensor_array, _ = make_aklt_mps(L)
     # target_mps = qtn.MatrixProductState(tensor_array, shape='lrp')
     # mps_p = MPSPreparation(target_mps)
     
