@@ -51,8 +51,10 @@ def make_splitted_mps(tens):
     return splitted_tens
 
 
-def make_bell_pair_mps(L):
-    bell_tensor = (np.eye(4)).reshape([2,2,4])
+def make_bell_pair_mps(L, phys_dim):
+    d, D = phys_dim, int(np.sqrt(phys_dim))
+    
+    bell_tensor = (np.eye(d)).reshape([D,D,d])
 
     bell_tens = [bell_tensor] * L
     bell_tens[ 0] = np.squeeze(bell_tens[ 0][0:1, :, :])

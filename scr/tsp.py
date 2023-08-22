@@ -18,6 +18,7 @@ from tsp_misc_tns import make_bell_pair_mps
 from tsp_misc_tns import make_bell_peps
 
 
+
 class PEPSPreparation():
     def __init__(self, tensor_grid, shape='ldrup', qubit_hamiltonian=0):
         self.target_grid = tensor_grid
@@ -134,15 +135,33 @@ class MPSPreparation():
             
     def adiabatic_state_preparation(self, Tmax, tau, max_bond, verbose=False):
         
+        print('adiabatic state preparation of mps:\n'
+              f'runtime={Tmax}, tau={tau:0.04}, steps={int(Tmax/tau)}, max_bond={max_bond}\n')
+                
+        Ds = self.target_mps.bond_sizes()
+        D, d = max(Ds), self.target_mps.phys_dim()
+        
+        # assumes uniform bond dimension
+        assert all(i == Ds[0] for i in Ds)
+        
+        if D**2 > d:
+            print('given mps is not injective. blocking it now ...')
+            # block the to be in injective form
+            block_size = int(np.ceil(2*np.log(D)/np.log(d)))
+            blocked_mps = tsp_hr.blockup_mps(self.target_mps, block_size)
+        else:
+            blocked_mps = self.target_mps
+            
+            
         s_func = lambda t: np.sin( (np.pi/2)*np.sin( (np.pi/2)*t/Tmax )**2 )**2
         # s_func = lambda t: np.sin( (np.pi/2)*t/Tmax)**2
         # s_func = lambda t: t/Tmax
         
         # # ####################################        
-        initial_tens   = make_bell_pair_mps(L=self.L)
+        initial_tens   = make_bell_pair_mps(L=blocked_mps.L, phys_dim=blocked_mps.phys_dim())
         initial_mps = qtn.MatrixProductState(initial_tens, shape='lrp')
         
-        data = adiabatic_state_preparation_1d(self.target_mps, initial_mps, 
+        data = adiabatic_state_preparation_1d(blocked_mps, initial_mps, 
                                               Tmax, tau, s_func, max_bond, verbose=verbose)
         
         self.adiabatic_data = data

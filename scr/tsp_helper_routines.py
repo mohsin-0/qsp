@@ -73,3 +73,26 @@ def norm_mps_ovrlap(mps1, mps2):
     
     return nomin/np.sqrt(denom1*denom2)
 
+
+def blockup_mps(mps, block_size):
+    assert mps.L/block_size==mps.L//block_size, ('mps length block size is not '
+                                                 'exactly divisible by block size')    
+    
+    tens = []
+    for block_indx, row in enumerate(np.reshape(np.arange(mps.L),(-1,block_size))):
+        
+        # TODO implement using ncon
+        tn = qtn.TensorNetwork()
+        for i in row:
+            tn.add(mps.tensor_map[i])
+        ten = ((tn^all).fuse({f'k{block_indx}': [f'k{i}' for i in row]})).data
+        
+        if block_indx==0:
+         ten = ten.transpose(1,0)
+        elif len(ten.shape)==3:
+            ten = ten.transpose(0,2,1)
+        tens.append(ten.data)
+        
+    blocked_mps = qtn.MatrixProductState(tens)
+    blocked_mps.permute_arrays(shape='lrp')
+    return blocked_mps

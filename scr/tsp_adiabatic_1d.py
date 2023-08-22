@@ -76,7 +76,7 @@ def make_hamiltonian_mpo(hamiltonian, L, phy_dim, compress=False):
         
         for it in range(s.shape[0]):
             if np.abs(s[it])>1e-12:
-                H[bond[0], bond[1]] += s[it], qu.qu(u[:,it].reshape(4,4)), qu.qu(v[it,:].reshape(4,4))
+                H[bond[0], bond[1]] += s[it], qu.qu(u[:,it].reshape(d,d)), qu.qu(v[it,:].reshape(d,d))
         
         
     H_local_ham1D = H.build_local_ham(L)

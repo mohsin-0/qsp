@@ -19,21 +19,16 @@ if __name__ == "__main__":
     # TODO: isoPEPS preparation not published yet.
     # TODO: MPS in Quimb Format -> Gates? (also for LCU circuits)    
     # TODO: Input and format of the MPS - should be framework agnostic
-    # TODO: Break 4 qubit gate
     # TODO: sanity check for TSP - d==chi
-    
     # TODO: ***LCU to tket circuit
-    # TODO: ***2d AKLT + 1d AKLT block up to see result for other than aklt
-    
     # add references
     # add documentation
-    
       
     qubit_hamiltonian = 0
-    mps_type = 'heisenberg'#'P4'#'aklt'#'aklt'#''random'#'random'#
+    mps_type = 'random'#'heisenberg'#'P4'#'aklt'#
 
     if mps_type == 'aklt':
-        L=8
+        L = 8
         tens, bond = make_aklt_mps(L)
         tens = make_splitted_mps(tens)
         target_mps = qtn.MatrixProductState(tens, shape='lrp')
@@ -41,10 +36,9 @@ if __name__ == "__main__":
         
 
     if mps_type == 'random':
-        L = 8
-        target_mps = (qtn.MPS_rand_state(L=L, bond_dim=2) + 
-                      qtn.MPS_rand_state(L=L, bond_dim=2)*0*1j)
-
+        L = 32
+        target_mps = qtn.MPS_rand_state(L=L, bond_dim=2)
+        target_mps.permute_arrays(shape='lrp')
         
     if mps_type in ['P4','N2','heisenberg']:
         filenames = {'P4': 'data/P4_6-31G_dist2.0000.pkl', 
@@ -78,31 +72,41 @@ if __name__ == "__main__":
     # number_of_lcu_layers = 4
     # mpsp.variational_lcu_preparation(number_of_lcu_layers, verbose=False)
     
-    
-    #### 2d adiabatic state preparation    
-    L=8
-    tensor_array, _ = make_aklt_mps(L)
-    target_mps = qtn.MatrixProductState(tensor_array, shape='lrp')
+
+    #### 1d adiabatic state preparation - random D=d=2 mps
     mps_p = MPSPreparation(target_mps)
-    
-    Tmax, tau = 6, 0.04 #total runtime, trotter step size
+    Tmax, tau = 32, 0.04 #total runtime, trotter step size
     max_bond = 2
     mps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
     
     plt.plot(mps_p.adiabatic_data['target_fidelity'].keys(), 
              mps_p.adiabatic_data['target_fidelity'].values(), '.-')
+
+    
+    #### 1d adiabatic state preparation - aklt
+    # L=8
+    tensor_array, _ = make_aklt_mps(L)
+    # target_mps = qtn.MatrixProductState(tensor_array, shape='lrp')
+    # mps_p = MPSPreparation(target_mps)
+    
+    # Tmax, tau = 6, 0.04 #total runtime, trotter step size
+    # max_bond = 2
+    # mps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
+    
+    # plt.plot(mps_p.adiabatic_data['target_fidelity'].keys(), 
+    #          mps_p.adiabatic_data['target_fidelity'].values(), '.-')
     
     
     #### 2d adiabatic state preparation    
-    Lx, Ly = 10, 2
-    target_grid, _ = make_aklt_peps(Lx, Ly)
-    peps_p = PEPSPreparation(target_grid)
+    # Lx, Ly = 10, 2
+    # target_grid, _ = make_aklt_peps(Lx, Ly)
+    # peps_p = PEPSPreparation(target_grid)
     
-    Tmax, tau = 6, 0.04
-    max_bond = 2
-    peps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
+    # Tmax, tau = 6, 0.04
+    # max_bond = 2
+    # peps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
 
-    plt.plot(peps_p.adiabatic_data['target_fidelity'].keys(), 
-              peps_p.adiabatic_data['target_fidelity'].values(), '.-')
+    # plt.plot(peps_p.adiabatic_data['target_fidelity'].keys(), 
+    #           peps_p.adiabatic_data['target_fidelity'].values(), '.-')
     
     
