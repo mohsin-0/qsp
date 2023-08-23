@@ -8,8 +8,8 @@ from ncon import ncon
 from tqdm import tqdm
 import quimb.tensor as qtn
 
+from to_qiskit import to_qiskit_from_unitary_layers
 import tsp_helper_routines as tsp_hr
-
 
 DTYPE = np.complex128
 
@@ -251,7 +251,6 @@ def get_submps_indices(mps):
     return submps_indices
 
 ###############################################################################
-###############################################################################
 def generate_sequ_for_mps(mps, 
                           italic_D, 
                           do_compression=False, 
@@ -318,14 +317,16 @@ def generate_sequ_for_mps(mps,
             depths.append(depth)
             gate_counts.append(gate_count)
             
-            
+    
+    circ = to_qiskit_from_unitary_layers(unitaries, mps_orig.L, mps_orig)    
     preparation_data = {'disentangled_mps_overlaps': disentangled_mps_overlaps, 
                         'overlaps': overlaps, 
                         'it_Ds': it_Ds, 
                         'depths': depths, 
                         'gate_counts': gate_counts, 
                         'energies': energies,
-                        'unitaries': unitaries}
+                        'unitaries': unitaries,
+                        'circ': circ}
     
     return preparation_data
 
