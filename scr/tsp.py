@@ -18,7 +18,6 @@ from tsp_misc_tns import make_bell_pair_mps
 from tsp_misc_tns import make_bell_peps
 
 
-
 class PEPSPreparation():
     def __init__(self, tensor_grid, shape='ldrup', qubit_hamiltonian=0):
         self.target_grid = tensor_grid

@@ -5,6 +5,10 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pickle as pkl
 
+import sys
+from os.path import dirname, abspath
+sys.path.append(abspath(dirname(__file__)).strip('examples')+'scr')
+
 import quimb.tensor as qtn
 
 from tsp_misc_tns import make_aklt_mps, make_splitted_mps
@@ -37,7 +41,7 @@ if __name__ == "__main__":
 
     if mps_type == 'random':
         L = 16
-        target_mps = qtn.MPS_rand_state(L=L, bond_dim=2)
+        target_mps = qtn.MPS_rand_state(L=L, bond_dim=4)
         target_mps.permute_arrays(shape='lrp')
         
     if mps_type in ['P4','N2','heisenberg']:
@@ -55,16 +59,18 @@ if __name__ == "__main__":
         qubit_hamiltonian = data['qubit_hamiltonian']
         
     
-    # mps_p = MPSPreparation(target_mps, qubit_hamiltonian=qubit_hamiltonian)
+    mps_p = MPSPreparation(target_mps, qubit_hamiltonian=qubit_hamiltonian)
     # # 
     # number_of_layers = 4
     # mpsp.seq_preparation(number_of_layers, do_compression=False, max_bond_dim=64, verbose=True)
     
+    #
     # number_of_layers = 2
-    # mpsp.variational_seq_preparation(number_of_layers, do_compression=False, max_bond_dim=64, verbose=True)
+    # mps_p.variational_seq_preparation(number_of_layers, do_compression=False, max_bond_dim=64, verbose=True)
+    
     # # 
-    # depth = 8
-    # mpsp.qctn_preparation(depth)
+    depth = 8
+    mps_p.qctn_preparation(depth)
     
     # number_of_lcu_layers = 4  
     # mpsp.lcu_preparation(number_of_lcu_layers, verbose=False)
@@ -74,13 +80,13 @@ if __name__ == "__main__":
     
 
     #### 1d adiabatic state preparation - random D=d=2 mps
-    mps_p = MPSPreparation(target_mps)
-    Tmax, tau = 32, 0.04 #total runtime, trotter step size
-    max_bond = 2
-    mps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
+    # mps_p = MPSPreparation(target_mps)
+    # Tmax, tau = 32, 0.04 #total runtime, trotter step size
+    # max_bond = 2
+    # mps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
     
-    plt.plot(mps_p.adiabatic_data['target_fidelity'].keys(), 
-             mps_p.adiabatic_data['target_fidelity'].values(), '.-')
+    # plt.plot(mps_p.adiabatic_data['target_fidelity'].keys(), 
+    #          mps_p.adiabatic_data['target_fidelity'].values(), '.-')
 
     
     #### 1d adiabatic state preparation - aklt

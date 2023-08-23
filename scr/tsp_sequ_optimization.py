@@ -3,14 +3,10 @@
 
 import numpy as np
 
-from pytket.circuit import Circuit, Unitary1qBox, Unitary2qBox
-from pytket.passes import DecomposeBoxes
-from pytket.extensions.qiskit import AerBackend
+import qiskit 
 import quimb.tensor as qtn
 
 import tsp_helper_routines as tsp_hr
-
-AER_BACKEND = AerBackend()
 
 
 def overlap_value(al, psi, approx_psi, residual, qubit_hamiltonian=0):
@@ -18,34 +14,30 @@ def overlap_value(al, psi, approx_psi, residual, qubit_hamiltonian=0):
     
 
 def apply_quimb_unitary(u, quimb_circ, it, it_plus_1):
-    if u.shape[0]==4:
-        circ = Circuit(2).add_unitary2qbox(Unitary2qBox(u), 0,1)
-        DecomposeBoxes().apply(circ)
-        compiled_circ = AER_BACKEND.get_compiled_circuit(circ, optimisation_level=1)
+    n_qubits = int(np.log2(u.shape[0]))
     
-    else:
-        circ = Circuit(1).add_unitary1qbox(Unitary1qBox(u), 0)
-        DecomposeBoxes().apply(circ)
-        compiled_circ = AER_BACKEND.get_compiled_circuit(circ, optimisation_level=1)
+    circ = qiskit.QuantumCircuit(n_qubits)
+    circ.unitary(u, list(range(n_qubits)))
+
+    if n_qubits==1:   
+        # single qubit unitary, to take care of the reverse ordering in the single-case
+        it_plus_1 = it
         
-    for command in compiled_circ.get_commands():
-        
-        if command.op.type.name=='TK1':
-            qubit_id = (it, it_plus_1)[command.qubits[0].index[0]]
-            params = command.op.params
-        
-            quimb_circ.apply_gate('RZ', params[2]*np.pi, qubit_id, parametrize=True)
-            quimb_circ.apply_gate('RX', params[1]*np.pi, qubit_id, parametrize=True)
-            quimb_circ.apply_gate('RZ', params[0]*np.pi, qubit_id, parametrize=True)
-            
-        elif command.op.type.name=='CX': 
-            quimb_circ.apply_gate('CX', it, it_plus_1)
-            
+    trans_qc = qiskit.transpile(circ, basis_gates=['cx','u3'])
+    for instruction in trans_qc:
+        if instruction.operation.name=='u3':
+            qubit_id = (it_plus_1,it)[instruction.qubits[0].index]
+            params = instruction.operation.params
+            quimb_circ.apply_gate('U3', params[0], params[1], params[2], qubit_id, parametrize=True)
+                
+        elif instruction.operation.name=='cx':
+            quimb_circ.apply_gate('CX', it_plus_1, it)
+             
         else:
             print('unhandled gate')
             exit()
+        
             
-
 def generate_circ_from_unitary_layers(unitary_layers, L):
 
     quimb_circ = qtn.Circuit(L)
@@ -67,9 +59,9 @@ def loss(circ_unitary, zero_wfn, target_mps):
     """returns -abs(<target_mps|circ_unitary|zero_wfn>)
         assumes that target_mps and zero_wfn are normalized
     """
-    return -abs((circ_unitary.H & target_mps & zero_wfn).contract(all, 
-                                                                  optimize='auto-hq', 
-                                                                  backend='tensorflow'))
+    return -abs((circ_unitary.H & target_mps & zero_wfn).
+                contract(all, optimize='auto-hq', backend='tensorflow'))
+
 
 def sequ_unitary_circuit_optimization(target_mps, unitaries): 
     """build parametrized circuit from sequential unitary ansatz
@@ -95,7 +87,7 @@ def sequ_unitary_circuit_optimization(target_mps, unitaries):
         loss,                                       # function to minimize
         loss_constants={'zero_wfn':zero_wfn,        # static inputs
                         'target_mps': target_mps},  
-        tags=['RX','RZ'],                           # only optimize RX and RZ tensors
+        tags=['U3'],                                
         autodiff_backend='tensorflow', optimizer='L-BFGS-B'
     )
     unitary_opt = tnopt.optimize_basinhopping(n=1000, nhop=4)
