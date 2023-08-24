@@ -191,14 +191,14 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
         
 
     overlap = tf.math.abs(nomin/tf.math.sqrt(denomin))
-    overlap = 1-overlap#tf.cast(overlap, dtype=tf.float64)
-    print(1-overlap)
+    overlap = -tf.cast(overlap, dtype=tf.float64)
+    # print(1-overlap)
     
     return overlap
     
     
 
-def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps): 
+def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps, max_time=7200, max_iterations=3000, verbose=False): 
 
     half_id = tf.convert_to_tensor([[1., 0., 0., 0.],[0., 1., 0., 0.]], dtype=TFTYPE)
     half_zr = tf.reshape(tf.convert_to_tensor([1., 0.], dtype=TFTYPE), shape=(-1,1))
@@ -241,7 +241,6 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
     manifold = Manifold(4, 2, k=no_of_layers*L)
     euclidean_gradient = euclidean_hessian = None
     
-    
     compute_overlap(tensor, lcu_shapes_list, 
                            target_isometry_list, target_shapes_list, 
                            kappas, 
@@ -264,33 +263,41 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
         euclidean_gradient=euclidean_gradient,
         euclidean_hessian=euclidean_hessian)
     
-    quiet = False
     
     # optimizer = TrustRegions(verbosity=2 * int(not quiet), max_time=7200)
     # estimated_spanning_set = optimizer.run( problem, Delta_bar=8 * np.sqrt(2), initial_point=tensor).point
     
-    optimizer = ConjugateGradient(max_time=7200, max_iterations=3000)
-    estimated_spanning_set = optimizer.run( problem, initial_point=tensor, ).point
-    # optimizer = NelderMead()
+    optimizer = ConjugateGradient(max_time=max_time, 
+                                  max_iterations=max_iterations, 
+                                  verbosity=int(verbose)*2)
+    estimated_spanning_set = optimizer.run( problem, initial_point=tensor).point
+
+
+    lcu_mps_opt = convert_to_lcu_mps(estimated_spanning_set, 
+                                     len(kappas.numpy()), target_mps.L)
+    data = {'lcu_mps_opt': lcu_mps_opt,
+            'optimizer': optimizer}
+    return data
+
+
+
+import quimb.tensor as qtn
+def convert_to_lcu_mps(opt_tensor, num_of_layers, L):
+    half_id = np.array([[1., 0., 0., 0.],[0., 1., 0., 0.]])
+    half_zr = np.array([1., 0.])
     
+    lcu_mps_opt = []
+    for k_it in range(num_of_layers):
+        curr_mps = [opt_tensor[k_it*L + site] for site in range(L)]
+        curr_mps[ 0] = (half_id@curr_mps[ 0]).reshape(2,2).transpose((1,0))
+        curr_mps[-1] = (curr_mps[-1]@half_zr).reshape(2,2)
         
-    # for j in tqdm(range(iters)):        
-    #     overlap = loss(tensor)
-        
-    #     # riemannian_optimizer.apply_gradients(zip(grad, lcu_isometry_list_var))    
-        
-    #     # learning_rate = riemannian_optimizer._get_hyper("learning_rate") * decay
-    #     # riemannian_optimizer._set_hyper("learning_rate", learning_rate)
-        
-    #     # # vanilla optimization over kappas does not help
-    #     # # optimizer.apply_gradients(zip([grad[-1]], [kappas]))        
-    #     # overlaps_list.append(overlap)
-    #     # grad_norm = np.linalg.norm(lcu_list_to_x(grad, shape_structure))
-    #     # print(f' {overlap.numpy()=},\t{grad_norm=},\t')
-        
-    # print(overlap)
-    # tf.print(f'final overlap (after {iters} iters): ', overlaps_list[-1])
-    
+        for it in range(1, L-1):
+            curr_mps[it] = curr_mps[it].reshape((2,2,2)).transpose((0,2,1))
+
+        lcu_mps_opt.append(qtn.MatrixProductState(curr_mps))
+                
+    return lcu_mps_opt
     
 if __name__ == "__main__":
     pass

@@ -9,7 +9,8 @@ import QGOpt as qgo
 import tensornetwork as tn
 
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def mps_to_isometry_list(tens_list, canonical_form): 
@@ -189,20 +190,20 @@ def value_and_gradient(lcu_isometry_list_var, lcu_shapes_list,
     return overlap, grad
 
 
-def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps): 
+def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps, verbose=False): 
     tn.set_default_backend("tensorflow")
     tf.random.set_seed(42)
     
-    iters = 500 # number of iterations
+    iters = 10 # number of iterations
     lr_i = 0.05 # initial learning rate
-    lr_f = 0.05 # final learning rate
+    lr_f = 0.001 # final learning rate
     
     # learning rate is multiplied by this coefficient each iteration
     decay = (lr_f / lr_i) ** (1 / iters)
     
     m = qgo.manifolds.StiefelManifold()  # complex Stiefel manifold
-    riemannian_optimizer = qgo.optimizers.RAdam(m, learning_rate=0.1)
-    # optimizer = tf.keras.optimizers.Adam()
+    riemannian_optimizer = qgo.optimizers.RAdam(m, learning_rate=lr_i)
+    # riemannian_optimizer = tf.keras.optimizers.Adam()
     # lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
     #     initial_learning_rate=1.,
     #     decay_steps=10000,
@@ -242,21 +243,48 @@ def lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps):
         
         
         riemannian_optimizer.apply_gradients(zip(grad, lcu_isometry_list_var))    
+        riemannian_optimizer._set_hyper("learning_rate", 
+                                        riemannian_optimizer._get_hyper("learning_rate") * decay)
+
         
-        learning_rate = riemannian_optimizer._get_hyper("learning_rate") * decay
-        riemannian_optimizer._set_hyper("learning_rate", learning_rate)
         
         # vanilla optimization over kappas does not help
         # optimizer.apply_gradients(zip([grad[-1]], [kappas]))        
         overlaps_list.append(overlap)
         grad_norm = np.linalg.norm(lcu_list_to_x(grad, shape_structure))
-        print(f' {overlap.numpy()=},\t{grad_norm=},\t')
+        print(f' overlap={overlap.numpy():.06f}, \t |grad|={grad_norm:.06f},\t')
         
     tf.print(f'final overlap (after {iters} iters): ', overlaps_list[-1])
+
+
+
+    ####     
+    lcu_mps_opt = convert_to_lcu_mps(lcu_isometry_list_var, lcu_shapes_list, 
+                                     len(lcu_mps), target_mps.L)
+    data = {'lcu_mps_opt': lcu_mps_opt}
+    return data
     
+
+def convert_to_lcu_mps(tens_list, lcu_shapes_list, num_of_layers, L):
+    tens = list(map(qgo.manifolds.real_to_complex, tens_list))
+    tens = [tf.reshape(x, shape).numpy() for x, shape in zip(tens, lcu_shapes_list)]
     
+    lcu_mps_opt = []
+    for k_it in range(num_of_layers):
+        curr_mps = [tens[k_it*L + site] for site in range(L)]
+        curr_mps[ 0] = curr_mps[ 0].transpose((1,0))
+        curr_mps[-1] = curr_mps[-1]
+        
+        for it in range(1, L-1):
+            curr_mps[it] = curr_mps[it].transpose((0,2,1))
+
+        lcu_mps_opt.append(qtn.MatrixProductState(curr_mps))    
+        
+    return lcu_mps_opt
+        
+        
 if __name__ == "__main__":
-    with open('temp_dump.pkl', 'rb') as f:
+    with open('/home/mohsin/Documents/gh/gh_qsp/examples/temp_dump.pkl', 'rb') as f:
         [target_mps, kappas, lcu_mps] = pkl.load(f)
         
     lcu_unitary_circuit_optimization(target_mps, kappas, lcu_mps)

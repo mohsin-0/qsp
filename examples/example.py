@@ -24,14 +24,14 @@ if __name__ == "__main__":
     # TODO: sanity check for TSP - d==chi
     # TODO: add references + add documentation + comments
     # TODO: LCU to tket circuit
+    # TODO: qiskit circut for adiabatic 1d, abiabatic 2d
     # TODO: Notebooks - one example notebook. one notebook for benchmarks
     # TODO: pip
-    # TODO: qiskit circut for seq, adiabatic 1d, abiabatic 2d
     # TODO: fix verbose
     # TODO ordering of input arguments and type checking
     
     qubit_hamiltonian = 0
-    mps_type = 'P4'#'heisenberg'#'P4'#'aklt'#
+    mps_type = 'P4'#'random'#'heisenberg'#'aklt'#
     
     if mps_type == 'aklt':
         L = 8
@@ -65,10 +65,10 @@ if __name__ == "__main__":
 
     mps_p = MPSPreparation(target_mps, qubit_hamiltonian=qubit_hamiltonian)
     
+    #
     number_of_layers = 3
     mps_p.seq_preparation(number_of_layers, do_compression=False, verbose=False)
-    print('\n\n')
-    
+    print('')
     
     #
     number_of_layers = 3
@@ -82,15 +82,19 @@ if __name__ == "__main__":
     depth = 8
     n_iter, nhop = 40, 4,
     mps_p.qctn_preparation(depth, n_iter=n_iter, nhop=nhop)
+    print('\n\n')
+    
+    #
+    number_of_lcu_layers = 4  
+    mps_p.lcu_preparation(number_of_lcu_layers, verbose=False)
+    print('\n\n')
+    
+    #
+    number_of_lcu_layers = 4
+    mps_p.variational_lcu_preparation(number_of_lcu_layers, verbose=True)
+    print('\n\n')
     
     
-    # number_of_lcu_layers = 4  
-    # mpsp.lcu_preparation(number_of_lcu_layers, verbose=False)
-    
-    # number_of_lcu_layers = 4
-    # mpsp.variational_lcu_preparation(number_of_lcu_layers, verbose=False)
-    
-
     #### 1d adiabatic state preparation - random D=d=2 mps
     # mps_p = MPSPreparation(target_mps)
     # Tmax, tau = 32, 0.04 #total runtime, trotter step size

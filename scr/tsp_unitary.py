@@ -335,7 +335,8 @@ def generate_sequ_for_mps(mps,
 ###############################################################################
 def compress_copy(psi, max_bond):
     f = psi.copy(deep=True)
-    f.right_canonize(normalize=True)
+    f.right_canonize()
+    f.normalize()
     f.compress(form='right', max_bond=max_bond)
     
     if max_bond==2:

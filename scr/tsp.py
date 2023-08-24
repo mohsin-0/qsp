@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
+import pickle as pkl
 
 import quimb.tensor as qtn
 
 import tsp_unitary as tspu
 import tsp_helper_routines as tsp_hr
 
+from tsp_lcu_optimization_manopt import lcu_unitary_circuit_optimization as lcu_manopt
+from tsp_lcu_optimization_qgopt  import lcu_unitary_circuit_optimization as lcu_qgopt
+
 from tsp_sequ_optimization import sequ_unitary_circuit_optimization
-from tsp_lcu_optimization import lcu_unitary_circuit_optimization
+
+
 from tsp_qctn import quantum_circuit_tensor_network_ansatz
 
 from tsp_adiabatic_1d import adiabatic_state_preparation_1d
@@ -119,8 +124,7 @@ class MPSPreparation():
                                          qubit_hamiltonian=self.qubit_hamiltonian, 
                                          verbose=verbose)
         
-        self.lcu_preparation_data = data
-        
+        self.lcu_data = data
         kappas, unitaries = data['kappas'], data['unitaries']
         
         zero_wfn = tsp_hr.cl_zero_mps(self.L)
@@ -132,23 +136,49 @@ class MPSPreparation():
         encoded_mps.right_canonize(normalize=True)
         overlap = tsp_hr.norm_mps_ovrlap(encoded_mps, self.target_mps)
         
-        assert np.abs(overlap-data['overlaps'][-1]) < 1e-14, 'overlap from lcu unitary does not match!'
-        print('final overlap from seq. preparation:',  overlap)
+        assert (np.abs(overlap-data['overlaps'][-1]) < 1e-14, 
+                f"overlap from lcu unitary does not match! {overlap}!={data['overlaps'][-1]}")
+        
+        print(f'overllap after lcu. preparation = {np.abs(overlap):.8f}\n')
         
         
     def variational_lcu_preparation(self, number_of_lcu_layers, verbose=False):
-        self.lcu_preparation(number_of_lcu_layers, verbose=verbose)
         
-        data = self.lcu_preparation_data
-        kappas, unitaries = data['kappas'], data['unitaries']
-        zero_wfn = tsp_hr.cl_zero_mps(self.L)
-        lcu_mps = [tspu.apply_unitary_layers_on_wfn(curr_us, zero_wfn) for curr_us in unitaries]
+        if not hasattr(self, 'lcu_data'):
+            self.lcu_preparation(number_of_lcu_layers, verbose=False)
         
-        lcu_unitary_circuit_optimization(self.target_mps, kappas, lcu_mps)
+        kappas, unitaries = self.lcu_data['kappas'], self.lcu_data['unitaries']
+        lcu_mps = [tspu.apply_unitary_layers_on_wfn(curr_us, 
+                                                    tsp_hr.cl_zero_mps(self.L)) 
+                   for curr_us in unitaries]
+       
+
+        method_name = ''
+        if all([D==2 for mps in lcu_mps for D in mps.bond_sizes()]):
+            method_name = 'manopt'
+            self.manopt_data = lcu_manopt(self.target_mps, kappas, lcu_mps, 
+                                          max_time=20, max_iterations=3000, 
+                                          verbose=verbose)
+            
+            lcu_mps_opt, kappas = self.manopt_data['lcu_mps_opt'], self.lcu_data['kappas']
+            
+
+        else:
+            method_name = 'qgopt'
+            self.qgopt_data = lcu_qgopt(self.target_mps, kappas, lcu_mps, 
+                                        verbose=False)            
+            lcu_mps_opt, kappas = self.qgopt_data['lcu_mps_opt'], self.lcu_data['kappas']
+            
+            
+        encoded_mps = tsp_hr.cl_zero_mps(self.L)*0
+        for kappa, curr_mps in zip(kappas, lcu_mps_opt):
+            encoded_mps = encoded_mps + kappa*curr_mps
+        encoded_mps.right_canonize(normalize=True)
+        overlap = tsp_hr.norm_mps_ovrlap(encoded_mps, self.target_mps)
+        print(f'overllap after lcu optimization ({method_name}) = {np.abs(overlap):.8f}\n')
+        
             
         
-    
-            
     def adiabatic_state_preparation(self, Tmax, tau, max_bond, verbose=False):
         
         print('adiabatic state preparation of mps:\n'
