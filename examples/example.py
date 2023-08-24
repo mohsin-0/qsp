@@ -29,6 +29,7 @@ if __name__ == "__main__":
     # TODO: pip
     # TODO: fix verbose
     # TODO ordering of input arguments and type checking
+    # TODO some costing for lcu + adiabatic
     
     qubit_hamiltonian = 0
     mps_type = 'P4'#'random'#'heisenberg'#'aklt'#
