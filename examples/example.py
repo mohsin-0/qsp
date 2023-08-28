@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # TODO some costing for lcu + adiabatic
     
     qubit_hamiltonian = 0
-    mps_type = 'P4'#'random'#'heisenberg'#'aklt'#
+    mps_type = 'N2'#'heisenberg'#'aklt'#'random'#
     
     if mps_type == 'aklt':
         L = 8
@@ -67,33 +67,32 @@ if __name__ == "__main__":
     mps_p = MPSPreparation(target_mps, qubit_hamiltonian=qubit_hamiltonian)
     
     #
-    number_of_layers = 3
+    number_of_layers = 4
     mps_p.seq_preparation(number_of_layers, do_compression=False, verbose=False)
     print('')
     
-    #
-    number_of_layers = 3
-    n_iter, nhop = 40, 4
-    mps_p.variational_seq_preparation(number_of_layers, do_compression=False, 
-                                      n_iter=n_iter, nhop=nhop,
-                                      verbose=False)
-    print('\n\n')
+    # #
+    # number_of_layers = 3
+    # n_iter, nhop = 40, 4
+    # mps_p.variational_seq_preparation(number_of_layers, do_compression=False, 
+    #                                   n_iter=n_iter, nhop=nhop,
+    #                                   verbose=False)
+    # print('\n\n')
     
-    # 
-    depth = 8
-    n_iter, nhop = 40, 4,
-    mps_p.qctn_preparation(depth, n_iter=n_iter, nhop=nhop)
-    print('\n\n')
-    
-    #
-    number_of_lcu_layers = 4  
-    mps_p.lcu_preparation(number_of_lcu_layers, verbose=False)
-    print('\n\n')
+    # # 
+    # depth = 8
+    # n_iter, nhop = 40, 4,
+    # mps_p.qctn_preparation(depth, n_iter=n_iter, nhop=nhop)
+    # print('\n\n')
     
     #
     number_of_lcu_layers = 4
-    mps_p.variational_lcu_preparation(number_of_lcu_layers, verbose=True)
-    print('\n\n')
+    mps_p.lcu_preparation(number_of_lcu_layers, verbose=False)
+        
+    #
+    # number_of_lcu_layers = 4
+    # mps_p.variational_lcu_preparation(number_of_lcu_layers, verbose=True)
+    # print('\n\n')
     
     
     #### 1d adiabatic state preparation - random D=d=2 mps

@@ -20,40 +20,12 @@ from tsp_adiabatic_2d import adiabatic_state_preparation_2d
 
 from tsp_misc_tns import make_bell_pair_mps
 from tsp_misc_tns import make_bell_peps
-
-
-class PEPSPreparation():
-    def __init__(self, tensor_grid, shape='ldrup', qubit_hamiltonian=0):
-        self.target_grid = tensor_grid
-        self.shape = shape
-        self.qubit_hamiltonian = qubit_hamiltonian
-        
-        self.Lx, self.Ly = len(tensor_grid[0]), len(tensor_grid)
-        self.phy_dim = tensor_grid[0][0].shape[-1]
-            
-        
-    def adiabatic_state_preparation(self, Tmax, tau, max_bond, verbose=False):        
-        # s_func = lambda t: np.sin( (np.pi/2)*np.sin( (np.pi/2)*t/Tmax )**2 )**2
-        s_func = lambda t: np.sin( (np.pi/2)*t/Tmax)**2
-        # s_func = lambda t: t/Tmax
-        
-        # target_grid, bonds = make_aklt_peps(Lx, Ly)
-        initial_grid, bonds = make_bell_peps(self.Lx, self.Ly)
-        
-        data = adiabatic_state_preparation_2d(self.target_grid, 
-                                       initial_grid, bonds, 
-                                       self.Lx, self.Ly, self.phy_dim, 
-                                       Tmax, tau, max_bond, s_func, 
-                                       verbose=verbose)
-        self.adiabatic_data = data
-        
-        t_last = max(data['ss'].keys())
-        s, e, f = data['ss'][t_last], data['energy'][t_last], data['target_fidelity'][t_last]
-        print(f"\n2d adiabatic preparation: @ {s=:.5f}, e={e:.08f} and f={f:.08f}\n")
         
             
 class MPSPreparation():
-    def __init__(self, tensor_array, shape='lrp', qubit_hamiltonian=0):
+    def __init__(self, 
+                 tensor_array, 
+                 shape='lrp'):
         
         if isinstance(tensor_array, qtn.tensor_1d.MatrixProductState):
             target_mps = tensor_array        
@@ -63,8 +35,6 @@ class MPSPreparation():
         self.target_mps = target_mps
         self.shape = target_mps.shape
         self.L = target_mps.L
-        self.qubit_hamiltonian = qubit_hamiltonian
-        
         
     def seq_preparation(self, number_of_layers, 
                         do_compression=False, max_bond_dim=64, 
@@ -138,7 +108,23 @@ class MPSPreparation():
         assert (np.abs(overlap-data['overlaps'][-1]) < 1e-14, 
                 f"overlap from lcu unitary does not match! {overlap}!={data['overlaps'][-1]}")
         
-        print(f'overllap after lcu. preparation = {np.abs(overlap):.8f}\n')
+        # unitaries = []
+        kappas_temp = np.zeros(len(kappas))
+        kappas_temp[0] = 1.
+
+        import qiskit
+        from lcu_circuit import apply_lcu_with_layers
+        
+        k = int(np.ceil(np.log2(len(kappas))))
+        L = self.L
+        circ = qiskit.QuantumCircuit(L+k+1)
+        apply_lcu_with_layers(circ, kappas_temp,  unitaries)
+        circ = qiskit.transpile(circ, basis_gates=['cx','u3'])
+        print(data['overlaps'])
+
+        
+        print(f'overllap after lcu. preparation = {np.abs(overlap):.8f}, ',
+              f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}')
         
         
     def variational_lcu_preparation(self, number_of_lcu_layers, verbose=False):
@@ -151,7 +137,6 @@ class MPSPreparation():
                                                     tsp_hr.cl_zero_mps(self.L)) 
                    for curr_us in unitaries]
        
-
         method_name = ''
         if all([D==2 for mps in lcu_mps for D in mps.bond_sizes()]):
             method_name = 'manopt'
@@ -215,4 +200,35 @@ class MPSPreparation():
         curr_f, tar_f = data['current_fidelity'][t_last], data['target_fidelity'][t_last],
         print(f"final overlap @ {s=:.5f} is e={e:.08f}, "
               f"curr_f={curr_f:.08f}, and target_fid={tar_f:.08f}\n")
+
+
+
+
+class PEPSPreparation():
+    def __init__(self, tensor_grid, shape='ldrup'):
+        self.target_grid = tensor_grid
+        self.shape = shape
         
+        
+        self.Lx, self.Ly = len(tensor_grid[0]), len(tensor_grid)
+        self.phy_dim = tensor_grid[0][0].shape[-1]
+            
+        
+    def adiabatic_state_preparation(self, Tmax, tau, max_bond, verbose=False):        
+        # s_func = lambda t: np.sin( (np.pi/2)*np.sin( (np.pi/2)*t/Tmax )**2 )**2
+        s_func = lambda t: np.sin( (np.pi/2)*t/Tmax)**2
+        # s_func = lambda t: t/Tmax
+        
+        # target_grid, bonds = make_aklt_peps(Lx, Ly)
+        initial_grid, bonds = make_bell_peps(self.Lx, self.Ly)
+        
+        data = adiabatic_state_preparation_2d(self.target_grid, 
+                                       initial_grid, bonds, 
+                                       self.Lx, self.Ly, self.phy_dim, 
+                                       Tmax, tau, max_bond, s_func, 
+                                       verbose=verbose)
+        self.adiabatic_data = data
+        
+        t_last = max(data['ss'].keys())
+        s, e, f = data['ss'][t_last], data['energy'][t_last], data['target_fidelity'][t_last]
+        print(f"\n2d adiabatic preparation: @ {s=:.5f}, e={e:.08f} and f={f:.08f}\n")        

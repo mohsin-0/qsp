@@ -434,9 +434,9 @@ def generate_lcu_for_mps(mps,
             
             it_Ds.append(it)
             overlaps.append(overlap)
-            energies.append(np.real(approx_energy))
-            
-    # unitaries = []
+            energies.append(np.real(approx_energy))            
+    
+    
     preparation_data = {'kappas': kappas,
                         'unitaries': unitaries,
                         'approx_mps_overlap': approx_mps_overlap, 
@@ -444,6 +444,6 @@ def generate_lcu_for_mps(mps,
                         'depths': depths, 
                         'gate_counts': gate_counts, 
                         'overlaps': overlaps, 
-                        'energies': energies }
+                        'energies': energies}
     
     return preparation_data
