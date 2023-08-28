@@ -73,6 +73,7 @@ def apply_lcu_with_layers(circ, kappas,  unitaries, target_mps=[]):
         
     prepapre_state(circ, kappas, inverse=True)
     
+    circ_copy = circ.copy()
     
     #3 some sanity check
     if target_mps:
@@ -87,6 +88,7 @@ def apply_lcu_with_layers(circ, kappas,  unitaries, target_mps=[]):
         print('overlap to target mps from constructed lcu circuit =', 
               overlap(targe_vec, lcu_output))    
     
+    return circ_copy
 
 def apply_lcu(circ, kappas,  unitaries, target_mps=[]):
     k = int(np.ceil(np.log2(len(kappas))))

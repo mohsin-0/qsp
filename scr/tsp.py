@@ -10,7 +10,7 @@ import tsp_helper_routines as tsp_hr
 from tsp_lcu_optimization_manopt import lcu_unitary_circuit_optimization as lcu_manopt
 from tsp_lcu_optimization_qgopt  import lcu_unitary_circuit_optimization as lcu_qgopt
 
-from tsp_sequ_optimization import sequ_unitary_circuit_optimization
+from tsp_sequ_optimization import seq_unitary_circuit_opti
 
 
 from tsp_qctn import quantum_circuit_tensor_network_ansatz
@@ -27,8 +27,9 @@ class MPSPreparation():
                  tensor_array, 
                  shape='lrp'):
         
-        if isinstance(tensor_array, qtn.tensor_1d.MatrixProductState):
-            target_mps = tensor_array        
+        if isinstance(tensor_array, qtn.MatrixProductState):
+            target_mps = tensor_array    
+            
         else:
             target_mps = qtn.MatrixProductState(tensor_array, shape=shape)
         
@@ -36,11 +37,15 @@ class MPSPreparation():
         self.shape = target_mps.shape
         self.L = target_mps.L
         
-    def seq_preparation(self, number_of_layers, 
-                        do_compression=False, max_bond_dim=64, 
+        
+    def seq_preparation(self, 
+                        number_of_layers, 
+                        do_compression=False, 
+                        max_bond_dim=64, 
                         verbose=False):
         
-        data = tspu.generate_sequ_for_mps(self.target_mps, number_of_layers, 
+        data = tspu.generate_sequ_for_mps(self.target_mps, 
+                                          number_of_layers, 
                                           do_compression=do_compression, 
                                           max_bond_dim=max_bond_dim, 
                                           verbose=verbose)
@@ -49,28 +54,37 @@ class MPSPreparation():
         unitaries, circ = data['unitaries'], data['circ']
         
         # sanity check
-        encoded_mps = tspu.apply_unitary_layers_on_wfn(unitaries, tsp_hr.cl_zero_mps(self.L))
+        encoded_mps = tspu.apply_unitary_layers_on_wfn(unitaries, 
+                                                       tsp_hr.cl_zero_mps(self.L))
+        
         encoded_mps.right_canonize(normalize=True)
         overlap = tsp_hr.norm_mps_ovrlap(encoded_mps, self.target_mps)    
-        assert np.abs(overlap-data['overlaps'][-1]) < 1e-14, 'overlap from seq unitary does not match!'
+        assert (np.abs(overlap-data['overlaps'][-1]) < 1e-14, 
+                'overlap from seq unitary does not match!')
 
         print(f'overlap from static seq. preparation = {np.abs(overlap):0.8f}, '
               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}')
 
         
-    def variational_seq_preparation(self, number_of_layers, n_iter, nhop,
-                                    do_compression=False, max_bond_dim=64, 
+    def variational_seq_preparation(self, 
+                                    number_of_layers, 
+                                    n_iter, 
+                                    nhop,
+                                    do_compression=False, 
+                                    max_bond_dim=64, 
                                     verbose=False):
         
         if not hasattr(self, 'seq_data'):
             self.seq_preparation(number_of_layers, 
-                                 do_compression=do_compression, max_bond_dim=max_bond_dim, 
+                                 do_compression=do_compression, 
+                                 max_bond_dim=max_bond_dim, 
                                  verbose=False)
         
         print('\nnow doing variational optimization over gates')
-        self.var_seq_data = sequ_unitary_circuit_optimization(self.target_mps, 
-                                                              self.seq_data['unitaries'],
-                                                              n_iter, nhop)
+        self.var_seq_data = seq_unitary_circuit_opti(self.target_mps, 
+                                                     self.seq_data['unitaries'],
+                                                     n_iter, 
+                                                     nhop)
         
         circ, tnopt = self.var_seq_data['circ'], self.var_seq_data['tnopt']
         
@@ -79,18 +93,22 @@ class MPSPreparation():
         
  
     def qctn_preparation(self, depth, n_iter, nhop):
-        self.qctn_data = quantum_circuit_tensor_network_ansatz(self.target_mps, depth, n_iter, nhop,)
+        self.qctn_data = quantum_circuit_tensor_network_ansatz(self.target_mps, 
+                                                               depth, 
+                                                               n_iter, 
+                                                               nhop,)
         
         circ, tnopt = self.qctn_data['circ'], self.qctn_data['tnopt']
         print(f'overllap after qctn optimization = {-tnopt.loss_best:0.8f}, ',
               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}')
     
         
+    def lcu_preparation(self, 
+                        number_of_lcu_layers, 
+                        verbose=False):
         
-    def lcu_preparation(self, number_of_lcu_layers, verbose=False):
         data = tspu.generate_lcu_for_mps(self.target_mps, 
                                          number_of_lcu_layers,
-                                         qubit_hamiltonian=self.qubit_hamiltonian, 
                                          verbose=verbose)
         
         self.lcu_data = data
@@ -108,9 +126,8 @@ class MPSPreparation():
         assert (np.abs(overlap-data['overlaps'][-1]) < 1e-14, 
                 f"overlap from lcu unitary does not match! {overlap}!={data['overlaps'][-1]}")
         
-        # unitaries = []
-        kappas_temp = np.zeros(len(kappas))
-        kappas_temp[0] = 1.
+        # kappas_temp = np.zeros(len(kappas))
+        # kappas_temp[0] = 1.
 
         import qiskit
         from lcu_circuit import apply_lcu_with_layers
@@ -118,16 +135,18 @@ class MPSPreparation():
         k = int(np.ceil(np.log2(len(kappas))))
         L = self.L
         circ = qiskit.QuantumCircuit(L+k+1)
-        apply_lcu_with_layers(circ, kappas_temp,  unitaries)
+        circ = apply_lcu_with_layers(circ, kappas,  unitaries)
         circ = qiskit.transpile(circ, basis_gates=['cx','u3'])
         print(data['overlaps'])
 
-        
+
         print(f'overllap after lcu. preparation = {np.abs(overlap):.8f}, ',
               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}')
         
         
-    def variational_lcu_preparation(self, number_of_lcu_layers, verbose=False):
+    def variational_lcu_preparation(self, 
+                                    number_of_lcu_layers, 
+                                    verbose=False):
         
         if not hasattr(self, 'lcu_data'):
             self.lcu_preparation(number_of_lcu_layers, verbose=False)
@@ -139,20 +158,28 @@ class MPSPreparation():
        
         method_name = ''
         if all([D==2 for mps in lcu_mps for D in mps.bond_sizes()]):
+            print('ss')
+            
             method_name = 'manopt'
-            self.manopt_data = lcu_manopt(self.target_mps, kappas, lcu_mps, 
-                                          max_time=20, max_iterations=3000, 
+            self.manopt_data = lcu_manopt(self.target_mps, 
+                                          kappas, 
+                                          lcu_mps, 
+                                          max_time=60, 
+                                          max_iterations=3000, 
                                           verbose=verbose)
             
-            lcu_mps_opt, kappas = self.manopt_data['lcu_mps_opt'], self.lcu_data['kappas']
-            
+            lcu_mps_opt = self.manopt_data['lcu_mps_opt']
+            kappas = self.lcu_data['kappas']
 
         else:
             method_name = 'qgopt'
-            self.qgopt_data = lcu_qgopt(self.target_mps, kappas, lcu_mps, 
-                                        verbose=False)            
-            lcu_mps_opt, kappas = self.qgopt_data['lcu_mps_opt'], self.lcu_data['kappas']
+            self.qgopt_data = lcu_qgopt(self.target_mps, 
+                                        kappas, 
+                                        lcu_mps, 
+                                        verbose=False)  
             
+            lcu_mps_opt = self.qgopt_data['lcu_mps_opt']
+            kappas = self.lcu_data['kappas']
             
         encoded_mps = tsp_hr.cl_zero_mps(self.L)*0
         for kappa, curr_mps in zip(kappas, lcu_mps_opt):
@@ -162,7 +189,6 @@ class MPSPreparation():
         print(f'overllap after lcu optimization ({method_name}) = {np.abs(overlap):.8f}\n')
         
             
-        
     def adiabatic_state_preparation(self, Tmax, tau, max_bond, verbose=False):
         
         print('adiabatic state preparation of mps:\n'

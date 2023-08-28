@@ -78,7 +78,7 @@ def loss(circ_unitary, zero_wfn, target_mps):
                 contract(all, optimize='auto-hq', backend='tensorflow'))
 
 
-def sequ_unitary_circuit_optimization(target_mps, unitaries, n_iter, nhop, verbose=False): 
+def seq_unitary_circuit_opti(target_mps, unitaries, n_iter, nhop, verbose=False): 
     """build parametrized circuit from sequential unitary ansatz
     """        
     quimb_circ, gid_to_qubit = generate_circ_from_unitary_layers(unitaries, target_mps.L)
