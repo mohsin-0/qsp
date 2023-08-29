@@ -158,13 +158,11 @@ class MPSPreparation():
        
         method_name = ''
         if all([D==2 for mps in lcu_mps for D in mps.bond_sizes()]):
-            print('ss')
-            
             method_name = 'manopt'
             self.manopt_data = lcu_manopt(self.target_mps, 
                                           kappas, 
                                           lcu_mps, 
-                                          max_time=60, 
+                                          max_time=200, 
                                           max_iterations=3000, 
                                           verbose=verbose)
             
