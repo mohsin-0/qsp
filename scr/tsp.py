@@ -115,7 +115,8 @@ class MPSPreparation():
         kappas, unitaries = data['kappas'], data['unitaries']
         
         zero_wfn = tsp_hr.cl_zero_mps(self.L)
-        lcu_mps = [tspu.apply_unitary_layers_on_wfn(curr_us, zero_wfn) for curr_us in unitaries]
+        lcu_mps = [tspu.apply_unitary_layers_on_wfn(curr_us, zero_wfn) 
+                   for curr_us in unitaries]
         
         encoded_mps = tsp_hr.cl_zero_mps(self.L)*0
         for kappa, curr_mps in zip(kappas, lcu_mps):
@@ -126,8 +127,8 @@ class MPSPreparation():
         assert (np.abs(overlap-data['overlaps'][-1]) < 1e-14, 
                 f"overlap from lcu unitary does not match! {overlap}!={data['overlaps'][-1]}")
         
-        # kappas_temp = np.zeros(len(kappas))
-        # kappas_temp[0] = 1.
+        kappas_temp = np.zeros(len(kappas))
+        kappas_temp[0] = 1.
 
         import qiskit
         from lcu_circuit import apply_lcu_with_layers
@@ -135,17 +136,22 @@ class MPSPreparation():
         k = int(np.ceil(np.log2(len(kappas))))
         L = self.L
         circ = qiskit.QuantumCircuit(L+k+1)
-        circ = apply_lcu_with_layers(circ, kappas,  unitaries)
+        circ, overlap_from_lcu_circ = apply_lcu_with_layers(circ, 
+                                                            kappas, 
+                                                            unitaries, 
+                                                            self.target_mps)
         circ = qiskit.transpile(circ, basis_gates=['cx','u3'])
-        print(data['overlaps'])
-
+        
+        print('overlap to target mps from constructed lcu circuit =', 
+               overlap_from_lcu_circ)
 
         print(f'overllap after lcu. preparation = {np.abs(overlap):.8f}, ',
-              f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}')
+               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}')
         
         
     def variational_lcu_preparation(self, 
                                     number_of_lcu_layers, 
+                                    max_iterations,
                                     verbose=False):
         
         if not hasattr(self, 'lcu_data'):
@@ -156,14 +162,14 @@ class MPSPreparation():
                                                     tsp_hr.cl_zero_mps(self.L)) 
                    for curr_us in unitaries]
        
+        print('\nnow doing variational optimization over LCU ansatz')
         method_name = ''
         if all([D==2 for mps in lcu_mps for D in mps.bond_sizes()]):
             method_name = 'manopt'
             self.manopt_data = lcu_manopt(self.target_mps, 
                                           kappas, 
                                           lcu_mps, 
-                                          max_time=200, 
-                                          max_iterations=3000, 
+                                          max_iterations=max_iterations, 
                                           verbose=verbose)
             
             lcu_mps_opt = self.manopt_data['lcu_mps_opt']
@@ -173,8 +179,9 @@ class MPSPreparation():
             method_name = 'qgopt'
             self.qgopt_data = lcu_qgopt(self.target_mps, 
                                         kappas, 
-                                        lcu_mps, 
-                                        verbose=False)  
+                                        lcu_mps,
+                                        max_iterations=max_iterations,
+                                        verbose=verbose)  
             
             lcu_mps_opt = self.qgopt_data['lcu_mps_opt']
             kappas = self.lcu_data['kappas']
@@ -256,3 +263,4 @@ class PEPSPreparation():
         t_last = max(data['ss'].keys())
         s, e, f = data['ss'][t_last], data['energy'][t_last], data['target_fidelity'][t_last]
         print(f"\n2d adiabatic preparation: @ {s=:.5f}, e={e:.08f} and f={f:.08f}\n")        
+        

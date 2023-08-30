@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # TODO ordering of input arguments and type checking
     # TODO some costing for lcu + adiabatic
     
-    mps_type = 'aklt'#'heisenberg'#'aklt'#'random'#
+    mps_type = 'N2'#'aklt'#'heisenberg'#'aklt'#
     
     if mps_type == 'aklt':
         L = 8
@@ -63,35 +63,38 @@ if __name__ == "__main__":
 
     mps_p = MPSPreparation(target_mps)
     
-    #
-    number_of_layers = 4
-    mps_p.seq_preparation(number_of_layers, do_compression=False, verbose=False)
-    print('')
+    # #
+    # number_of_layers = 4
+    # mps_p.seq_preparation(number_of_layers, do_compression=False, verbose=False)
+    # print('')
+    
+    # #
+    # number_of_layers = 4
+    # n_iter, nhop = 40, 4
+    # mps_p.variational_seq_preparation(number_of_layers, 
+    #                                   do_compression=False, 
+    #                                   n_iter=n_iter, 
+    #                                   nhop=nhop,
+    #                                   verbose=False)
+    # print('\n\n')
+    
+    # # 
+    # depth = 8
+    # n_iter, nhop = 10, 4,
+    # mps_p.qctn_preparation(depth, n_iter=n_iter, nhop=nhop)
+    # print('\n\n')
     
     #
-    number_of_layers = 4
-    n_iter, nhop = 40, 4
-    mps_p.variational_seq_preparation(number_of_layers, 
-                                      do_compression=False, 
-                                      n_iter=n_iter, 
-                                      nhop=nhop,
-                                      verbose=False)
-    print('\n\n')
-    
-    # 
-    depth = 8
-    n_iter, nhop = 10, 4,
-    mps_p.qctn_preparation(depth, n_iter=n_iter, nhop=nhop)
-    print('\n\n')
-    
-    #
-    number_of_lcu_layers = 4
-    mps_p.lcu_preparation(number_of_lcu_layers, verbose=False)
+    # number_of_lcu_layers = 4
+    # mps_p.lcu_preparation(number_of_lcu_layers, verbose=False)
         
     #
     number_of_lcu_layers = 4
-    mps_p.variational_lcu_preparation(number_of_lcu_layers, verbose=True)
-    print('\n\n')
+    max_iterations = 31
+    mps_p.variational_lcu_preparation(number_of_lcu_layers, 
+                                      max_iterations, 
+                                      verbose=False)
+    # print('\n\n')
     
     
     #### 1d adiabatic state preparation - random D=d=2 mps
@@ -105,26 +108,26 @@ if __name__ == "__main__":
 
     
     #### 1d adiabatic state preparation - aklt
-    tensor_array, _ = make_aklt_mps(L)
-    target_mps = qtn.MatrixProductState(tensor_array, shape='lrp')
-    mps_p = MPSPreparation(target_mps)
+    # tensor_array, _ = make_aklt_mps(L)
+    # target_mps = qtn.MatrixProductState(tensor_array, shape='lrp')
+    # mps_p = MPSPreparation(target_mps)
     
-    Tmax, tau = 6, 0.04 #total runtime, trotter step size
-    max_bond = 2
-    mps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
+    # Tmax, tau = 6, 0.04 #total runtime, trotter step size
+    # max_bond = 2
+    # mps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
     
-    plt.plot(mps_p.adiabatic_data['target_fidelity'].keys(), 
-              mps_p.adiabatic_data['target_fidelity'].values(), '.-')
+    # plt.plot(mps_p.adiabatic_data['target_fidelity'].keys(), 
+    #           mps_p.adiabatic_data['target_fidelity'].values(), '.-')
     
     
     #### 2d adiabatic state preparation    
-    Lx, Ly = 10, 2
-    target_grid, _ = make_aklt_peps(Lx, Ly)
-    peps_p = PEPSPreparation(target_grid)
+    # Lx, Ly = 10, 2
+    # target_grid, _ = make_aklt_peps(Lx, Ly)
+    # peps_p = PEPSPreparation(target_grid)
     
-    Tmax, tau = 6, 0.04
-    max_bond = 2
-    peps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
+    # Tmax, tau = 6, 0.04
+    # max_bond = 2
+    # peps_p.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
 
-    plt.plot(peps_p.adiabatic_data['target_fidelity'].keys(), 
-              peps_p.adiabatic_data['target_fidelity'].values(), '.-')
+    # plt.plot(peps_p.adiabatic_data['target_fidelity'].keys(), 
+    #           peps_p.adiabatic_data['target_fidelity'].values(), '.-')
