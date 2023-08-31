@@ -7,7 +7,7 @@ import QGOpt as qgo
 
 from tqdm.auto import tqdm
 
-import tsp_lcu_optimization_misc as tsp_lcu_opt_misc
+import lcu.tsp_lcu_optimization_misc as lcu_hlpr
 
 @tf.function
 def compute_overlap(lcu_list_var, lcu_shapes_list, 
@@ -24,10 +24,10 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
         curr_mps_shapes = lcu_shapes_list[it*L:(it+1)*L]
         
         # with and without kappa, the optimal answer is same
-        temp = tsp_lcu_opt_misc.mps_overlap(curr_mps, 
-                                            curr_mps_shapes,
-                                            target_isometry_list, 
-                                            target_shapes_list)
+        temp = lcu_hlpr.mps_overlap(curr_mps, 
+                                    curr_mps_shapes,
+                                    target_isometry_list, 
+                                    target_shapes_list)
         nomin = nomin + kappa * temp
                             
     denomin = 0.    
@@ -41,10 +41,10 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
             curr_mps2 = lcu_list_var_c[it2*L:(it2+1)*L]
             curr_mps_shapes2 = lcu_shapes_list[it2*L:(it2+1)*L]
             
-            temp = tsp_lcu_opt_misc.mps_overlap(curr_mps1, 
-                                                curr_mps_shapes1,
-                                                curr_mps2, 
-                                                curr_mps_shapes2)
+            temp = lcu_hlpr.mps_overlap(curr_mps1, 
+                                        curr_mps_shapes1,
+                                        curr_mps2, 
+                                        curr_mps_shapes2)
             denomin = denomin + (kappa1 * kappa2) * temp
 
 
@@ -127,14 +127,14 @@ def lcu_unitary_circuit_optimization(target_mps,
     # kappas = list(map(qgo.manifolds.complex_to_real, kappas)) 
     kappas = tf.Variable(kappas)
 
-    target_isometry_list, target_shapes_list = tsp_lcu_opt_misc.quimb_mps_to_tf_mps(target_mps, canonical_form='left')
+    target_isometry_list, target_shapes_list = lcu_hlpr.quimb_mps_to_tf_mps(target_mps, canonical_form='left')
     target_isometry_list = list(map(tf.constant, target_isometry_list)) 
     target_isometry_list = list(map(lambda x: tf.cast(x, dtype=tf.complex128), target_isometry_list))
     
     lcu_isometry_list = []
     lcu_shapes_list = []
     for mps in lcu_mps:
-        isometry_list, shapes_list = tsp_lcu_opt_misc.quimb_mps_to_tf_mps(mps, canonical_form='left')
+        isometry_list, shapes_list = lcu_hlpr.quimb_mps_to_tf_mps(mps, canonical_form='left')
         
         for shape, isometry in zip(shapes_list, isometry_list):
             lcu_shapes_list.append(shape)

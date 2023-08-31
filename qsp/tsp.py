@@ -7,8 +7,8 @@ import quimb.tensor as qtn
 import tsp_unitary as tspu
 import tsp_helper_routines as tsp_hr
 
-from tsp_lcu_optimization_manopt import lcu_unitary_circuit_optimization as lcu_manopt
-from tsp_lcu_optimization_qgopt  import lcu_unitary_circuit_optimization as lcu_qgopt
+from lcu.tsp_lcu_optimization_manopt import lcu_unitary_circuit_optimization as lcu_manopt
+from lcu.tsp_lcu_optimization_qgopt  import lcu_unitary_circuit_optimization as lcu_qgopt
 
 from tsp_sequ_optimization import seq_unitary_circuit_opti
 

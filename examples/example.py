@@ -9,7 +9,7 @@ import sys
 from os.path import dirname, abspath
 sys.path.append(abspath(dirname(__file__)).strip('examples')+'scr')
 
-import qiskit 
+
 import quimb.tensor as qtn
 
 from tsp_misc_tns import make_aklt_mps, make_splitted_mps
