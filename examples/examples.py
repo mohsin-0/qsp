@@ -22,6 +22,7 @@ if __name__ == "__main__":
     # TODO: basinhopping overlap from circuit don't match if the n_iters are isufficient
             # change to a different method
             # more instructive output - suggent to increase the number of iterations
+    # TODO: QCTN approximation of a PEPS
             
             
     mps_type = 'aklt'#'N2'#'P4'#'aklt'#'heisenberg'#'random'
@@ -47,19 +48,19 @@ if __name__ == "__main__":
         
         
     # #######
-    prep = MPSPreparation(target_mps)
-    number_of_layers = 4
-    prep.sequential_unitary_circuit(number_of_layers, 
-                                    do_compression=False, 
-                                    verbose=False)
+    # prep = MPSPreparation(target_mps)
+    # number_of_layers = 4
+    # prep.sequential_unitary_circuit(number_of_layers, 
+    #                                 do_compression=False, 
+    #                                 verbose=False)
     
-    #######
-    prep = MPSPreparation(target_mps)
-    number_of_layers = 2
-    n_iter, nhop = 400, 4
-    prep.sequential_unitary_circuit_optimization(number_of_layers, 
-                                                 do_compression=False, 
-                                                 n_iter=n_iter, nhop=nhop)
+    # #######
+    # prep = MPSPreparation(target_mps)
+    # number_of_layers = 2
+    # n_iter, nhop = 400, 4
+    # prep.sequential_unitary_circuit_optimization(number_of_layers, 
+    #                                              do_compression=False, 
+    #                                              n_iter=n_iter, nhop=nhop)
     
     # ####### 
     # prep = MPSPreparation(target_mps)
@@ -74,13 +75,13 @@ if __name__ == "__main__":
     # prep.lcu_unitary_circuit(number_of_lcu_layers, verbose=False)
     
     
-    ####### 
-    # prep = MPSPreparation(target_mps)
-    # number_of_lcu_layers = 4
-    # max_iterations = 4
-    # prep.lcu_unitary_circuit_optimization(number_of_lcu_layers, 
-    #                                       max_iterations, 
-    #                                       verbose=False)
+    ###### 
+    prep = MPSPreparation(target_mps)
+    number_of_lcu_layers = 4
+    max_iterations = 4
+    prep.lcu_unitary_circuit_optimization(number_of_lcu_layers, 
+                                          max_iterations, 
+                                          verbose=False)
     
 
     ####### 1d adiabatic state preparation - random D=d=2 mps

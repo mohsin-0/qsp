@@ -170,7 +170,7 @@ class MPSPreparation():
          
         temp_str = "" if overlap_from_lcu_circ is None else f' (from circ {overlap_from_lcu_circ:0.8f})'
         print(f'overllap after lcu. preparation = {np.abs(overlap):.8f}{temp_str}, ',
-               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n')
+              f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n')
         
         
     def lcu_unitary_circuit_optimization(self, 
@@ -198,7 +198,9 @@ class MPSPreparation():
         circ = qiskit.transpile(circ, basis_gates=['cx','u3']) 
         
         temp_str = '' if overlap_from_lcu_circ is None else f' (from circ {np.abs(overlap_from_lcu_circ):0.8f})'
-        print(f'overlap before lcu optimization = {np.abs(self.lcu_data["overlaps"][-1]):.10f} {temp_str}')
+        print('overlap before lcu optimization = '
+              f'{np.abs(self.lcu_data["overlaps"][-1]):.10f} {temp_str}, '
+              f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}')
         
                 
         lcu_mps = [apply_unitary_layers_on_wfn(curr_us, cl_zero_mps(self.L)) 
