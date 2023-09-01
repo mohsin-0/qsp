@@ -1,8 +1,8 @@
-from ._misc_tns import make_bell_pair_mps
-from ._misc_tns import make_bell_pair_peps
+from .misc_tns import make_bell_pair_mps
+from .misc_tns import make_bell_pair_peps
 
-from ._misc_tns import make_aklt_mps
-from ._misc_tns import make_aklt_peps
+from .misc_tns import make_aklt_mps
+from .misc_tns import make_aklt_peps
 
 
 __all__ = ["make_bell_pair_mps",

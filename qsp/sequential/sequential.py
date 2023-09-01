@@ -3,9 +3,9 @@
 import numpy as np
 from tqdm import tqdm
 
-from ._core import generate_bond_d_unitary
-from ._core import apply_inverse_unitary_layer_on_wfn
-from ._core import apply_unitary_layers_on_wfn
+from .core import generate_bond_d_unitary
+from .core import apply_inverse_unitary_layer_on_wfn
+from .core import apply_unitary_layers_on_wfn
 
 from ..q_circs import circuit_from_unitary_layers
 

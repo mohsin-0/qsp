@@ -9,8 +9,8 @@ from tqdm import tqdm
 import tensorflow as tf
 
 
-from ._lcu_optimization_misc import mps_overlap
-from ._lcu_optimization_misc import quimb_mps_to_tf_mps
+from .lcu_optimization_misc import mps_overlap
+from .lcu_optimization_misc import quimb_mps_to_tf_mps
 
 
 @tf.function

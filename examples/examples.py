@@ -19,16 +19,22 @@ if __name__ == "__main__":
     # TODO: fix verbose
     # TODO: ordering of input arguments and type checking
     # TODO: git domain, setup file -> author, email, liscence
-        
-    mps_type = 'random'#'N2'#'P4'#'aklt'#'heisenberg'#
+    # TODO: basinhopping overlap from circuit don't match if the n_iters are isufficient
+            # change to a different method
+            # more instructive output - suggent to increase the number of iterations
+            
+            
+    mps_type = 'aklt'#'N2'#'P4'#'aklt'#'heisenberg'#'random'
     if mps_type == 'aklt':
-        tensor_array, _ = make_aklt_mps(L=6)
+        tensor_array, _ = make_aklt_mps(L=4)
         tensor_array = make_splitted_mps(tensor_array)
-    
+        target_mps = qtn.MatrixProductState(tensor_array, shape='lrp')
+
          
     if mps_type == 'random':
         target_mps = qtn.MPS_rand_state(L=12, bond_dim=4)
         target_mps.permute_arrays(shape='lrp')
+
         
         
     if mps_type in ['P4','N2','heisenberg']:
@@ -49,63 +55,62 @@ if __name__ == "__main__":
     
     #######
     prep = MPSPreparation(target_mps)
-    number_of_layers = 4
-    n_iter, nhop = 2, 2
+    number_of_layers = 2
+    n_iter, nhop = 400, 4
     prep.sequential_unitary_circuit_optimization(number_of_layers, 
-                                                  do_compression=False, 
-                                                  n_iter=n_iter, nhop=nhop,
-                                                  verbose=False)
+                                                 do_compression=False, 
+                                                 n_iter=n_iter, nhop=nhop)
     
-    ####### 
-    prep = MPSPreparation(target_mps)
-    depth = 4
-    n_iter, nhop = 2, 2,
-    prep.quantum_circuit_tensor_network_ansatz(depth, n_iter=n_iter, nhop=nhop)
-    
-    
-    ####### 
-    prep = MPSPreparation(target_mps)
-    number_of_lcu_layers = 4
-    prep.lcu_unitary_circuit(number_of_lcu_layers, verbose=False)
+    # ####### 
+    # prep = MPSPreparation(target_mps)
+    # depth = 4
+    # n_iter, nhop = 2, 2,
+    # prep.quantum_circuit_tensor_network_ansatz(depth, n_iter=n_iter, nhop=nhop)
     
     
     ####### 
-    prep = MPSPreparation(target_mps)
-    number_of_lcu_layers = 4
-    max_iterations = 4
-    prep.lcu_unitary_circuit_optimization(number_of_lcu_layers, 
-                                          max_iterations, 
-                                          verbose=False)
+    # prep = MPSPreparation(target_mps)
+    # number_of_lcu_layers = 4
+    # prep.lcu_unitary_circuit(number_of_lcu_layers, verbose=False)
+    
+    
+    ####### 
+    # prep = MPSPreparation(target_mps)
+    # number_of_lcu_layers = 4
+    # max_iterations = 4
+    # prep.lcu_unitary_circuit_optimization(number_of_lcu_layers, 
+    #                                       max_iterations, 
+    #                                       verbose=False)
     
 
     ####### 1d adiabatic state preparation - random D=d=2 mps
-    target_mps = qtn.MPS_rand_state(L=6, bond_dim=2)
-    prep = MPSPreparation(target_mps)
-    Tmax, tau = 8, 0.04 #total runtime, trotter step size
-    max_bond = 2
-    prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
+    # target_mps = qtn.MPS_rand_state(L=6, bond_dim=2)
+    # prep = MPSPreparation(target_mps)
+    # Tmax, tau = 8, 0.04 #total runtime, trotter step size
+    # max_bond = 2
+    # prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
     # plt.plot(prep.adiabatic_data['target_fidelity'].keys(), 
               # prep.adiabatic_data['target_fidelity'].values(), '.-')
 
 
     ### 1d adiabatic state preparation - aklt 
-    tensor_array, _ = make_aklt_mps(L=6)
-    prep = MPSPreparation(tensor_array, shape='lrp')
-    Tmax, tau = 8, 0.04 # total runtime, trotter step size
-    max_bond = 2
-    prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)    
+    # tensor_array, _ = make_aklt_mps(L=6)
+    # prep = MPSPreparation(tensor_array, shape='lrp')
+    # Tmax, tau = 8, 0.04 # total runtime, trotter step size
+    # max_bond = 2
+    # prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)    
     # plt.plot(prep.adiabatic_data['target_fidelity'].keys(), 
               # prep.adiabatic_data['target_fidelity'].values(), '.-')
 
     
     # ## 2d adiabatic state preparation    
-    Lx, Ly = 2, 2
-    target_grid, _ = make_aklt_peps(Lx, Ly)
-    prep = PEPSPreparation(target_grid)
+    # Lx, Ly = 2, 2
+    # target_grid, _ = make_aklt_peps(Lx, Ly)
+    # prep = PEPSPreparation(target_grid)
     
-    Tmax, tau = 4, 0.04
-    max_bond = 2
-    prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
+    # Tmax, tau = 4, 0.04
+    # max_bond = 2
+    # prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
     
     # plt.plot(prep.adiabatic_data['target_fidelity'].keys(), 
              # prep.adiabatic_data['target_fidelity'].values(), '.-')

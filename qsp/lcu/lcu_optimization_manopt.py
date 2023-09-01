@@ -11,8 +11,8 @@ from pymanopt.optimizers import ConjugateGradient#TrustRegions, ConjugateGradien
 import quimb.tensor as qtn
 
 
-from ._lcu_optimization_misc import mps_overlap
-from ._lcu_optimization_misc import quimb_mps_to_tf_mps
+from .lcu_optimization_misc import mps_overlap
+from .lcu_optimization_misc import quimb_mps_to_tf_mps
 
 
 @tf.function
