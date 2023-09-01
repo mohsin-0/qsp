@@ -1,4 +1,4 @@
-*.pkl
+#*.pkl
 *.log
 
 # Byte-compiled / optimized / DLL files
