@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 import numpy as np
 
 import quimb as qu
 import quimb.tensor as qtn
 
-from to_qiskit import to_qiskit_from_quimb_unitary
-import tsp_helper_routines as tsp_hr
+from ..q_circs import circuit_from_quimb_unitary
+
+from ..tsp_helper_routines import cl_zero_mps
+from ..tsp_helper_routines import norm_mps_ovrlap
 
 
 def overlap_value(al, psi, approx_psi, residual, qubit_hamiltonian=0):
-    return -np.abs(tsp_hr.norm_mps_ovrlap(psi, approx_psi + al[0]*residual))
+    return -np.abs(norm_mps_ovrlap(psi, approx_psi + al[0]*residual))
 
     
 # quantum circuit tensor network ansatz
@@ -81,15 +82,18 @@ def quantum_circuit_tensor_network_ansatz(target_mps, depth, n_iter, nhop, verbo
     target_mps = target_mps.reindex(indx_map)
     
     quatnum_circ_tn, gid_to_qubit = tensor_network_ansatz_circuit(target_mps.L, depth, gate2='CX')
-    circ_unitary = quatnum_circ_tn.uni
+    circ_unitary = quatnum_circ_tn.get_uni(transposed=True)#quatnum_circ_tn.uni
     
-    zero_wfn = tsp_hr.cl_zero_mps(target_mps.L)
+    zero_wfn = cl_zero_mps(target_mps.L)
     zero_wfn = zero_wfn.astype(np.complex64)
     target_mps = target_mps.astype(np.complex64)
     circ_unitary = circ_unitary.astype(np.complex64)
+        
+    print(f'number of variational params in the circuit (from QCTN) are '
+          f'{quatnum_circ_tn.num_gates*3}') 
+    print('overlap before variational optimization = '
+          f'{loss(circ_unitary, zero_wfn, target_mps):.10f}')
     
-    print(f'number of gates in the circuit (from QCTN) are {quatnum_circ_tn.num_gates}') 
-    print(f'overlap before optimization = {loss(circ_unitary, zero_wfn, target_mps):.10f}\n')
     tnopt = qtn.TNOptimizer(
         circ_unitary,                               # tensor network to optimize
         loss,                                       # function to minimize
@@ -100,14 +104,15 @@ def quantum_circuit_tensor_network_ansatz(target_mps, depth, n_iter, nhop, verbo
     )
     optimized_unitary = tnopt.optimize_basinhopping(n=n_iter, nhop=nhop)
     
-    circ = to_qiskit_from_quimb_unitary(optimized_unitary, 
-                                        gid_to_qubit, 
-                                        target_mps.L, 
-                                        target_mps)
+    circ, overlap_from_seq_circ = circuit_from_quimb_unitary(optimized_unitary, 
+                                      gid_to_qubit, 
+                                      target_mps.L, 
+                                      target_mps)
     
     data = {'tnopt': tnopt,
             'optimized_unitary': optimized_unitary,
-            'circ': circ}
+            'circ': circ,
+            'overlap_from_seq_circ': overlap_from_seq_circ}
     
     return data
 

@@ -4,12 +4,16 @@ import numpy as np
 import scipy as sp
 import tensorflow as tf 
 
+
 import pymanopt 
 from pymanopt.manifolds import ComplexGrassmann# as Manifold
 from pymanopt.optimizers import ConjugateGradient#TrustRegions, ConjugateGradient, NelderMead
 import quimb.tensor as qtn
 
-import lcu.tsp_lcu_optimization_misc as lcu_hlpr
+
+from ._lcu_optimization_misc import mps_overlap
+from ._lcu_optimization_misc import quimb_mps_to_tf_mps
+
 
 @tf.function
 def compute_overlap(lcu_list_var, lcu_shapes_list, 
@@ -29,10 +33,10 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
         curr_mps[ 0] = half_id@curr_mps[ 0]
         curr_mps[-1] = curr_mps[-1]@half_zr
         
-        temp = lcu_hlpr.mps_overlap(curr_mps, 
-                                    curr_mps_shapes,
-                                    target_isometry_list, 
-                                    target_shapes_list)
+        temp = mps_overlap(curr_mps, 
+                           curr_mps_shapes,
+                           target_isometry_list, 
+                           target_shapes_list)
         # with and without kappa, the optimal answer is same
         nomin = nomin + kappa * temp
 
@@ -54,10 +58,10 @@ def compute_overlap(lcu_list_var, lcu_shapes_list,
             curr_mps2[ 0] = half_id@curr_mps2[ 0]
             curr_mps2[-1] = curr_mps2[-1]@half_zr
                         
-            temp = lcu_hlpr.mps_overlap(curr_mps1, 
-                                        curr_mps_shapes1,
-                                        curr_mps2, 
-                                        curr_mps_shapes2)
+            temp = mps_overlap(curr_mps1, 
+                               curr_mps_shapes1,
+                               curr_mps2, 
+                               curr_mps_shapes2)
             denomin = denomin + (kappa1 * kappa2) * temp
         
 
@@ -83,14 +87,14 @@ def lcu_unitary_circuit_optimization(target_mps,
     kappas = [kappa.tolist() for kappa in kappas]
     kappas = tf.Variable(kappas)
 
-    target_isometry_list, target_shapes_list = lcu_hlpr.quimb_mps_to_tf_mps(target_mps, canonical_form='left')
+    target_isometry_list, target_shapes_list = quimb_mps_to_tf_mps(target_mps, canonical_form='left')
     target_isometry_list = list(map(tf.constant, target_isometry_list)) 
     target_isometry_list = list(map(lambda x: tf.cast(x, dtype=tf.complex128), target_isometry_list))
     
     lcu_isometry_list = []
     lcu_shapes_list = []
     for mps in lcu_mps:
-        isometry_list, shapes_list = lcu_hlpr.quimb_mps_to_tf_mps(mps, canonical_form='left')
+        isometry_list, shapes_list = quimb_mps_to_tf_mps(mps, canonical_form='left')
         for shape, isometry in zip(shapes_list, isometry_list):
             
             if isometry.shape==(4,1): # eng 

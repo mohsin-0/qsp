@@ -4,10 +4,10 @@ import numpy as np
 import scipy as sp
 
 from ncon import ncon
-
 import quimb as qu
 import quimb.tensor as qtn
 from tqdm import tqdm
+
 
 def construct_parent_hamiltonian(tensor_grid, bonds, Lx, Ly, phy_dim):
     d=phy_dim
@@ -115,9 +115,9 @@ def main():
     s_func = lambda t: np.sin( (np.pi/2)*t/Tmax)**2
     # s_func = lambda t: t/Tmax
     
-    from tsp_misc_tns import make_aklt_peps, make_bell_peps
+    from misc_states import make_aklt_peps, make_bell_pair_peps
     target_grid, bonds = make_aklt_peps(Lx, Ly)
-    initial_grid, _ = make_bell_peps(Lx, Ly)
+    initial_grid, _ = make_bell_pair_peps(Lx, Ly)
     
     data = adiabatic_state_preparation_2d(target_grid, initial_grid, bonds, 
                                           Lx, Ly, phy_dim, 

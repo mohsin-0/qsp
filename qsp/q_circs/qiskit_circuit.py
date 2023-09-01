@@ -2,10 +2,28 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import scipy as sp
+import random
 
 import qiskit
 from qiskit.providers.aer import QasmSimulator
 import quimb.tensor as qtn
+
+
+def approximate_adiabatic_cost(gates):    
+    def qiskit_decomposition(u):
+        num_qubits = int(np.log2(len(u)))
+        qc = qiskit.QuantumCircuit(num_qubits)
+        qc.unitary(u, range(num_qubits))
+        qc = qiskit.transpile(qc, basis_gates=['cx','u'])
+        return qc
+    
+    counts = []
+    for sampled_gate in random.sample(gates, 30):
+        sampled_gate = sampled_gate.reshape(np.prod(sampled_gate.shape[:2]),-1 )
+        qc = qiskit_decomposition(sampled_gate)
+        counts.append([qc.size(), qc.num_nonlocal_gates()])
+    return len(gates)*np.mean(counts, axis=0)
+    
 
 def closest_unitary(A):
     V, _, Wh = sp.linalg.svd(A)
@@ -13,7 +31,7 @@ def closest_unitary(A):
     return U
 
 
-def to_qiskit_from_unitary_layers(unitary_layers, L, target_mps=[]):
+def circuit_from_unitary_layers(unitary_layers, L, target_mps=[]):
     circ = qiskit.QuantumCircuit(L)
     
     def apply_unitary_layer(Gs_lst):
@@ -31,7 +49,7 @@ def to_qiskit_from_unitary_layers(unitary_layers, L, target_mps=[]):
     
     circ = qiskit.transpile(circ, basis_gates=['cx','u3'])
     
-    
+    overlap_from_seq_circ = None
     if L<=16 and isinstance(target_mps, qtn.tensor_1d.MatrixProductState):  # some snaity check
         circ.save_statevector(label='vec_final')
         backend = QasmSimulator()
@@ -44,10 +62,11 @@ def to_qiskit_from_unitary_layers(unitary_layers, L, target_mps=[]):
                 fuse({'k':(f'k{i}' for i in range(L))}).
                 data).reshape([2]*L)
         orig = orig.transpose(list(reversed(range(L)))).flatten()    
-        print('overlap to target mps from constructed circuit =', np.abs(np.conj(orig.T)@qiskit_vec))
+        overlap_from_seq_circ = np.abs(np.conj(orig.T)@qiskit_vec)
+        # print(f'overlap to target mps from constructed circuit = {np.abs(np.conj(orig.T)@qiskit_vec)}, ')
         
         
-    return circ
+    return circ, overlap_from_seq_circ
 
 
 def find_tensor(u_gen, tag):
@@ -58,7 +77,7 @@ def find_tensor(u_gen, tag):
     return 'gate not found'
 
 
-def to_qiskit_from_quimb_unitary(unitary, gid_to_qubit, L, target_mps=[]):
+def circuit_from_quimb_unitary(unitary, gid_to_qubit, L, target_mps=[]):
     circ = qiskit.QuantumCircuit(L)
     
     for gid, qubits in gid_to_qubit.items():
@@ -76,6 +95,7 @@ def to_qiskit_from_quimb_unitary(unitary, gid_to_qubit, L, target_mps=[]):
             
     circ = qiskit.transpile(circ, basis_gates=['cx','u3'])
     
+    overlap_from_seq_circ = None
     ###
     if L<=16 and isinstance(target_mps, qtn.tensor_1d.MatrixProductState):  # some snaity check
         circ.save_statevector(label='vec_final')
@@ -89,6 +109,7 @@ def to_qiskit_from_quimb_unitary(unitary, gid_to_qubit, L, target_mps=[]):
                 fuse({'b':(f'b{i}' for i in range(L))}).
                 data).reshape([2]*L)
         orig = orig.transpose(list(reversed(range(L)))).flatten()
-        print('\noverlap to target mps from constructed circuit = ', np.abs(np.conj(orig.T)@qiskit_vec))
+        overlap_from_seq_circ = np.abs(np.conj(orig.T)@qiskit_vec)
+        # print(f'overlap to target mps from constructed circuit = {np.abs(np.conj(orig.T)@qiskit_vec)}, ')
     
-    return circ
+    return circ, overlap_from_seq_circ

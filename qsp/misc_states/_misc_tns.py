@@ -3,11 +3,8 @@
 import numpy as np
 import scipy as sp
 
-
 from ncon import ncon
-import quimb.tensor as qtn
 
-import tsp_helper_routines as tsp_hr
 
 pauli_x = [[0.+0.j, 1.+0.j],
            [1.+0.j, 0.+0.j]]
@@ -22,33 +19,6 @@ pauli_x = np.array(pauli_x)
 pauli_y = np.array(pauli_y)
 pauli_z = np.array(pauli_z)
 I = pauli_z@pauli_z
-
-
-def make_splitted_mps(tens):
-    splitted_tens = []
-    for indx, ten in enumerate(tens):
-        if indx==0:
-            ten = qtn.Tensor(ten.reshape((2, 2,2)), inds=('vr','pl','pr') )
-            tn = ten.split(('pl'), bond_ind='v0')
-            ten0 = (tn.tensor_map[0]).transpose(*('v0', 'pl'))
-            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
-            
-            
-        elif indx==(len(tens)-1):
-            ten = qtn.Tensor(ten.reshape((2, 2,2)), inds=('vl','pl','pr') )
-            tn = ten.split(('vl','pl'), bond_ind='v0')
-            ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
-            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'pr'))
-            
-        else:
-            ten = qtn.Tensor(ten.reshape((2,2, 2,2)), inds=('vl','vr','pl','pr') )
-            tn = ten.split(('vl','pl'), bond_ind='v0')
-            ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
-            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
-        
-        splitted_tens.append(ten0.data)
-        splitted_tens.append(ten1.data)
-    return splitted_tens
 
 
 def make_bell_pair_mps(L, phys_dim):
@@ -129,7 +99,7 @@ def make_aklt_mps(L):
     return aklt_tens, onsite_isometries
     
 
-def make_bell_peps(Lx, Ly):
+def make_bell_pair_peps(Lx, Ly):
     bell_tensor = (np.eye(16)).reshape((2,2,2,2, 16))
     
     tensor_grid, bonds = construct_tensor_grid(bell_tensor, Lx, Ly)

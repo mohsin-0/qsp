@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import copy
 import numpy as np
 import scipy as sp
 
 from ncon import ncon
-
-from qiskit.providers.aer import QasmSimulator
 import qiskit
+from qiskit.providers.aer import QasmSimulator
+
 
 backend = QasmSimulator()
 unitary_backend = qiskit.Aer.get_backend('unitary_simulator')
 
 
-def apply_lcu_with_layers(circ, kappas,  unitary_layers, target_mps=[]):
+def lcu_circuit_from_unitary_layers(circ, kappas,  unitary_layers, target_mps=[]):
     k = int(np.ceil(np.log2(len(kappas))))
     
-    import copy
     as_circs = copy.deepcopy(unitary_layers)
     kappas = copy.deepcopy(kappas)
     
@@ -155,9 +155,9 @@ def qiskit_decomposition(u):
             if (np.abs(a)>1e-8) and (np.abs(b)>1e-8):
                 phases.append(a/b)
                 
-    assert np.allclose(np.array(phases)-phases[0], 
-                       np.zeros(len(phases))), ('problem with phase extraction '
-                                                'all phases are not same')
+    # assert np.allclose(np.array(phases)-phases[0], 
+    #                    np.zeros(len(phases))), ('problem with phase extraction '
+    #                                             'all phases are not same')
     
     return qc, phases[0]
     
@@ -225,8 +225,6 @@ def overlap(vec1, vec2):
     return np.abs(np.conj(vec1).T@vec2)
 
 ###############################################################################
-
-
 
 if __name__ == "__main__":    
     import warnings

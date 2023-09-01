@@ -96,3 +96,30 @@ def blockup_mps(mps, block_size):
     blocked_mps = qtn.MatrixProductState(tens)
     blocked_mps.permute_arrays(shape='lrp')
     return blocked_mps
+
+
+def make_splitted_mps(tens):
+    splitted_tens = []
+    for indx, ten in enumerate(tens):
+        if indx==0:
+            ten = qtn.Tensor(ten.reshape((2, 2,2)), inds=('vr','pl','pr') )
+            tn = ten.split(('pl'), bond_ind='v0')
+            ten0 = (tn.tensor_map[0]).transpose(*('v0', 'pl'))
+            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
+            
+            
+        elif indx==(len(tens)-1):
+            ten = qtn.Tensor(ten.reshape((2, 2,2)), inds=('vl','pl','pr') )
+            tn = ten.split(('vl','pl'), bond_ind='v0')
+            ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
+            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'pr'))
+            
+        else:
+            ten = qtn.Tensor(ten.reshape((2,2, 2,2)), inds=('vl','vr','pl','pr') )
+            tn = ten.split(('vl','pl'), bond_ind='v0')
+            ten0 = (tn.tensor_map[0]).transpose(*('vl', 'v0', 'pl'))
+            ten1 = (tn.tensor_map[1]).transpose(*('v0', 'vr', 'pr'))
+        
+        splitted_tens.append(ten0.data)
+        splitted_tens.append(ten1.data)
+    return splitted_tens

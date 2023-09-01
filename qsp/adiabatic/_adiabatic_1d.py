@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-from matplotlib import pyplot as plt
 import numpy as np
 import scipy as sp
 
@@ -25,9 +23,9 @@ def make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True):
         mpo_tens[bond[0]].append(u.reshape(d,d,-1))   
         mpo_tens[bond[1]].append(v.reshape((-1,d,d))) # first comes v and then u
         
-        gates.append([bond, evo_op])
+        gates.append(evo_op)
         
-
+    
     for indx in range(L):   # run over all the sites
         if indx==0:
             mpo_tens[0] = mpo_tens[0][0].transpose((2,0,1))
@@ -52,7 +50,7 @@ def make_evolution_mpo(hamiltonian, L, phy_dim, tau, Tmax, compress=True):
         mpo_tens[bond[0]].append(u.reshape(d,d,-1))   # first comes u and then u
         mpo_tens[bond[1]].append(v.reshape((-1,d,d))) 
         
-        gates.append([bond, evo_op])
+        gates.append(evo_op)
     
     for indx in range(L):   # run over all the sites
         if indx==0:
@@ -122,7 +120,8 @@ def constuct_parent_hamiltonian(Qs, L, phy_dim):
 
 def calculate_energy_from_parent_hamiltonian_mpo(mps, H_mpo):
     mps_adj = mps.H
-    mps_adj.align_(H_mpo, mps_adj)
+    mps_adj.reindex({f'k{i}':f'b{i}' for i in range(mps.L)}, inplace=True)
+    # mps_adj.align_(H_mpo, mps_adj)
     exp_val = ((mps_adj & H_mpo & mps)^all)/((mps.H & mps)^all)   
     return exp_val
 
@@ -171,7 +170,7 @@ def adiabatic_state_preparation_1d(target_mps, initial_mps,
         
         ###
         ss[t] = s
-        energy[t] = np.real(calculate_energy_from_parent_hamiltonian_mpo(psi, hamiltonian_mpo))
+        energy[t] = 0#np.real(calculate_energy_from_parent_hamiltonian_mpo(psi, hamiltonian_mpo))
         target_fidelity[t]  = np.abs( ((target_mps.H & psi)^all) )
         current_fidelity[t] = np.abs( ((     mps_s.H & psi)^all) ) 
         gates[t] = gates_curr
@@ -201,7 +200,7 @@ def main():
     # s_func = lambda t: t/Tmax
     
     # # ####################################
-    from tsp_misc_tns import make_aklt_mps, make_bell_pair_mps
+    from misc_states import make_aklt_mps, make_bell_pair_mps
     target_tens, _ = make_aklt_mps(L=L)
     initial_tens   = make_bell_pair_mps(L=L, phys_dim=4)
 
@@ -218,12 +217,15 @@ def main():
     curr_f, tar_f = data['current_fidelity'][t_last], data['target_fidelity'][t_last],
     print(f"\nfinal overlap is {s=:.5f}, e={e:.08f}, "
           f"curr_f={curr_f:.08f}, target_fid={tar_f:.08f}\n")
-    
+
+
+    from matplotlib import pyplot as plt    
     x, y = data['target_fidelity'].keys(), data['target_fidelity'].values() 
     plt.plot(x, y, '.-')
     
     x, y = data['ss'].keys(), data['ss'].values() 
-    plt.plot(x, y, '.-')    
+    plt.plot(x, y, '.-')
+    
 
 if __name__ == "__main__":
     main()    
