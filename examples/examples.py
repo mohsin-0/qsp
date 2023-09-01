@@ -12,13 +12,13 @@ from qsp.tsp import MPSPreparation, PEPSPreparation
 from qsp.tsp_helper_routines import make_splitted_mps
 
 
-if __name__ == "__main__":
-    
+if __name__ == "__main__":    
     # TODO: git,  add references + add documentation + comments + readme (installation comments) 
     # TODO: Notebooks - one example notebook. one notebook for benchmarks
     # TODO: publish
     # TODO: fix verbose
-    # TODO ordering of input arguments and type checking
+    # TODO: ordering of input arguments and type checking
+    # TODO: git domain, setup file -> author, email, liscence
         
     mps_type = 'random'#'N2'#'P4'#'aklt'#'heisenberg'#
     if mps_type == 'aklt':
