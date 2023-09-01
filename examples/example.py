@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # TODO: publish
     # TODO: fix verbose
     # TODO ordering of input arguments and type checking
-    
+        
     mps_type = 'random'#'N2'#'P4'#'aklt'#'heisenberg'#
     if mps_type == 'aklt':
         tensor_array, _ = make_aklt_mps(L=6)

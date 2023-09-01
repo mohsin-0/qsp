@@ -61,7 +61,7 @@ class MPSPreparation():
             return 
         
         
-        print('prearing mps using sequential unitaries...')
+        print('preparing mps using sequential unitaries...')
         data = sequential_unitary_circuit(self.target_mps, 
                                           number_of_layers, 
                                           do_compression=do_compression, 
