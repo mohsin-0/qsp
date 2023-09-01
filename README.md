@@ -1,8 +1,9 @@
 # Quantum State Preparation
 
-This repository contains an implemetation of different methods to prepapre tensor network states (mostly in 1d) on a quantum computer.
+This repository provides an implementation of various methods for preparing tensor network states (specifically, 1D tensor network states) on a quantum computer. 
 
-As an input ones needs to specify list of numpy arrays specifying MPS and then call different routines to use the package.
+To use the package, you first need to specify a list of NumPy arrays that represent the MPS. You can then 
+call different routines in the package to prepare the state.
 
 ## Installation
 ```
