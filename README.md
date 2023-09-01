@@ -17,17 +17,17 @@ pip install git+https://github.com/mohsin-0/qsp.git@main
 ## Basic Example
 
 ```python
-	from qsp.tsp import MPSPreparation
-	import numpy as np
-	bond_dim, phys_dim = 4, 2
+from qsp.tsp import MPSPreparation
+import numpy as np
+bond_dim, phys_dim = 4, 2
 
-	L=10
-	tensor_array = [np.random.rand(bond_dim,bond_dim,phys_dim) for _ in range(L)]
-	tensor_array[ 0] = np.random.rand(bond_dim,phys_dim)  # end points of mps
-	tensor_array[-1] = np.random.rand(bond_dim,phys_dim)
-	prep = MPSPreparation(tensor_array, shape='lrp')
+L=10
+tensor_array = [np.random.rand(bond_dim,bond_dim,phys_dim) for _ in range(L)]
+tensor_array[ 0] = np.random.rand(bond_dim,phys_dim)  # end points of mps
+tensor_array[-1] = np.random.rand(bond_dim,phys_dim)
+prep = MPSPreparation(tensor_array, shape='lrp')
 
-	prep.sequential_unitary_circuit(number_of_layers=4)
+prep.sequential_unitary_circuit(number_of_layers=4)
 ```
 
 ## References
