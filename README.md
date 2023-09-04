@@ -11,7 +11,7 @@ pip install git+https://github.com/mohsin-0/qsp.git@main
 ```
 
 ## Tutorial
-[Usage tutorial](https://github.com/mohsin-0/qsp/blob/main/examples/state_prep_examples.ipynb)
+[Usage tutorial](https://github.com/mohsin-0/qsp/blob/main/examples/state_prep_examples.ipynb) and som [Benchmarks](https://github.com/mohsin-0/qsp/blob/main/examples/benchmarks.ipynb)
 
 
 ## Basic Example
