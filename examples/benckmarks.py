@@ -97,8 +97,7 @@ if __name__ == "__main__":
     for mps_type in mps_types:
         num_layers = [2,3]
         overlaps = [-data_var_seq[mps_type][n]['tnopt'].loss_best for n in num_layers]
-        plt.plot(num_layers, (1-np.abs(np.array(overlaps))), 'o-', label=labels[mps_type])
-        
+        plt.plot(num_layers, (1-np.abs(np.array(overlaps))), 'o-', label=labels[mps_type])    
     plt.title(r'$variational\ sequential\ unitary\ ansatz$')        
     plt.ylabel('$overlap\ with\ target\ wavefunction$')
     plt.xlabel('$num\ of\ variational\ sequential\ layers$')

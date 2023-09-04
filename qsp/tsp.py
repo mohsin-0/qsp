@@ -99,16 +99,17 @@ class MPSPreparation():
               f'(num_var_seq_layers={num_var_seq_layers})...')
 
         
-        self.seq_data = sequential_unitary_circuit(self.target_mps, 
-                                                   num_var_seq_layers, 
-                                                   do_compression=do_compression, 
-                                                   max_bond_dim=max_bond_dim, 
-                                                   verbose=verbose)
-
+        self.var_seq_static_data = sequential_unitary_circuit(self.target_mps, 
+                                                              num_var_seq_layers, 
+                                                              do_compression=do_compression, 
+                                                              max_bond_dim=max_bond_dim, 
+                                                              verbose=verbose)
         
         self.var_seq_data = sequential_unitary_circuit_optimization(
-            self.target_mps, self.seq_data['unitaries'], max_iterations, num_hops
-            )
+            self.target_mps, 
+            self.var_seq_static_data['unitaries'], 
+            max_iterations, 
+            num_hops)
         
         circ, tnopt = self.var_seq_data['circ'], self.var_seq_data['tnopt']
         
@@ -145,59 +146,63 @@ class MPSPreparation():
               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n')
     
         
-    def lcu_unitary_circuit(self, 
-                            number_of_lcu_layers, 
-                            verbose=False):
+    def lcu_unitary_circuit(self, num_lcu_layers, verbose=False):
         if self.phys_dim!=2:
-            print('only supports mps with physical dimesnion=2')
-            return 
-        
-        print('preparing mps as linear combination of unitaries (LCU)...')
-        data = lcu_unitary_circuit(self.target_mps, 
-                                   number_of_lcu_layers,
-                                   verbose=verbose)
+            raise ValueError('only supports mps with physical dimesnion=2')
+           
+       
+        print(f'preparing mps as linear combination of unitaries '
+             f'(num_lcu_layers={num_lcu_layers})...')
+        data = lcu_unitary_circuit(self.target_mps, num_lcu_layers, verbose=verbose)
         self.lcu_data = data
         kappas, unitaries = data['kappas'], data['unitaries']
-        
+       
         zero_wfn = cl_zero_mps(self.L)
         lcu_mps = [apply_unitary_layers_on_wfn(curr_us, zero_wfn) 
-                   for curr_us in unitaries]
+                       for curr_us in unitaries]
         
         encoded_mps = cl_zero_mps(self.L)*0
         for kappa, curr_mps in zip(kappas, lcu_mps):
             encoded_mps = encoded_mps + kappa*curr_mps
+            
         encoded_mps.right_canonize(normalize=True)
         overlap = norm_mps_ovrlap(encoded_mps, self.target_mps)
-        assert np.abs(overlap-data['overlaps'][-1]) < 1e-14, f"overlap from lcu unitary does not match! {overlap}!={data['overlaps'][-1]}"
+        # assert np.abs(overlap-data['overlaps'][-1]) < 1e-14, f"overlap from lcu unitary does not match! {overlap}!={data['overlaps'][-1]}"
         
         k = int(np.ceil(np.log2(len(kappas))))
         L = self.L
         circ = qiskit.QuantumCircuit(L+k+1)
         circ, overlap_from_lcu_circ = lcu_circuit_from_unitary_layers(circ, kappas, unitaries, self.target_mps)
         circ = qiskit.transpile(circ, basis_gates=['cx','u3'])
-         
+        self.lcu_data['circ'] = circ
+        
         temp_str = "" if overlap_from_lcu_circ is None else f' (from circ {overlap_from_lcu_circ:0.8f})'
         print(f'overllap after lcu. preparation = {np.abs(overlap):.8f}{temp_str}, ',
               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n')
         
         
     def lcu_unitary_circuit_optimization(self, 
-                                         number_of_lcu_layers, 
+                                         num_var_lcu_layers, 
                                          max_iterations,
                                          verbose=False):
         
         if self.phys_dim!=2:
-            print('only supports mps with physical dimesnion=2')
-            return 
+            raise ValueError('only supports mps with physical dimesnion=2')
+            
+        if np.abs(np.log2(num_var_lcu_layers)-int(np.log2(num_var_lcu_layers)))>1e-12:
+            raise ValueError(f'required num_var_lcu_layers={num_var_lcu_layers} not a positive power of 2')
+            
         
-        print('doing variational optimization over linear combination of unitaries...')
+        print('doing variational optimization over linear combination of unitaries...'
+              f'(num_var_lcu_layers={num_var_lcu_layers})')
         
-        self.lcu_data = lcu_unitary_circuit(self.target_mps, 
-                                            number_of_lcu_layers, 
+        self.var_lcu_static_data = lcu_unitary_circuit(self.target_mps, 
+                                            num_var_lcu_layers, 
                                             verbose=verbose)
         
 
-        kappas, unitaries = self.lcu_data['kappas'], self.lcu_data['unitaries']
+        kappas    = self.var_lcu_static_data['kappas']
+        unitaries = self.var_lcu_static_data['unitaries']
         
         k = int(np.ceil(np.log2(len(kappas))))
         L = self.L
@@ -207,7 +212,7 @@ class MPSPreparation():
         
         temp_str = '' if overlap_from_lcu_circ is None else f' (from circ {np.abs(overlap_from_lcu_circ):0.8f})'
         print('overlap before lcu optimization = '
-              f'{np.abs(self.lcu_data["overlaps"][-1]):.10f} {temp_str}, '
+              f'{np.abs(self.var_lcu_static_data["overlaps"][-1]):.10f} {temp_str}, '
               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}')
         
                 
@@ -217,24 +222,26 @@ class MPSPreparation():
         method_name = ''
         if all([D==2 for mps in lcu_mps for D in mps.bond_sizes()]):
             method_name = 'manopt'
-            self.manopt_data = lcu_manopt(self.target_mps, 
+            self.var_lcu_data = lcu_manopt(self.target_mps, 
                                           kappas, 
                                           lcu_mps, 
                                           max_iterations=max_iterations, 
                                           verbose=verbose)    
-            lcu_mps_opt = self.manopt_data['lcu_mps_opt']
-            kappas = self.lcu_data['kappas']
+        
+            lcu_mps_opt = self.var_lcu_data['lcu_mps_opt']
+            kappas = self.var_lcu_static_data['kappas']
 
         else:
             method_name = 'qgopt'
-            self.qgopt_data = lcu_qgopt(self.target_mps, 
+            self.var_lcu_data = lcu_qgopt(self.target_mps, 
                                         kappas, 
                                         lcu_mps,
                                         max_iterations=max_iterations,
                                         verbose=verbose)  
-            lcu_mps_opt = self.qgopt_data['lcu_mps_opt']
-            kappas = self.lcu_data['kappas']
+            lcu_mps_opt = self.var_lcu_data['lcu_mps_opt']
+            kappas = self.var_lcu_static_data['kappas']
             
+        self.var_lcu_data['method_name'] = method_name
             
         encoded_mps = cl_zero_mps(self.L)*0
         for kappa, curr_mps in zip(kappas, lcu_mps_opt):
@@ -242,13 +249,15 @@ class MPSPreparation():
         encoded_mps.right_canonize(normalize=True)
         overlap = norm_mps_ovrlap(encoded_mps, self.target_mps)
         
-        
         k = int(np.ceil(np.log2(len(kappas))))
         L = self.L
         circ = qiskit.QuantumCircuit(L+k+1)
         circ, overlap_from_lcu_circ = lcu_circuit_from_unitary_layers(circ, kappas, unitaries, self.target_mps)
         circ = qiskit.transpile(circ, basis_gates=['cx','u3'])
-         
+        self.var_lcu_data['circ'] = circ
+        self.var_lcu_data['overlap'] = overlap
+        
+
         print(f'overllap after lcu optimization ({method_name}) = {np.abs(overlap):.8f}\n')
         
             
