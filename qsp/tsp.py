@@ -129,7 +129,7 @@ class MPSPreparation():
         if self.phys_dim!=2:
             raise ValueError('only supports mps with physical dimesnion=2')
             
-        print('preparing mps using quantum circuit tensor network ansatz'
+        print('preparing mps using quantum circuit tensor network ansatz '
               f'(qctn_depth={qctn_depth})...')
         
         self.qctn_data = quantum_circuit_tensor_network_ansatz(
@@ -193,8 +193,8 @@ class MPSPreparation():
             raise ValueError(f'required num_var_lcu_layers={num_var_lcu_layers} not a positive power of 2')
             
         
-        print('doing variational optimization over linear combination of unitaries...'
-              f'(num_var_lcu_layers={num_var_lcu_layers})')
+        print('doing variational optimization over linear combination of unitaries '
+              f'(num_var_lcu_layers={num_var_lcu_layers})...')
         
         self.var_lcu_static_data = lcu_unitary_circuit(self.target_mps, 
                                             num_var_lcu_layers, 
