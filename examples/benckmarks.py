@@ -50,18 +50,15 @@ if __name__ == "__main__":
         prep = MPSPreparation(target_mps)
         
         # ####### sequential mps preparation
-        num_seq_layers = 2
-        prep.sequential_unitary_circuit(num_seq_layers)
-        data_seq[mps_type] = prep.seq_data
+        # num_seq_layers = 2
+        # prep.sequential_unitary_circuit(num_seq_layers)
+        # data_seq[mps_type] = prep.seq_data
         
-
-        # # ####### variational mps preparation with sequential circicuit ansatz
-        # data_var_seq[mps_type] = {}
-        # max_iterations, nhop = 4, 1        
-        # for num_var_seq_layers in [2,3]:#[2,3,4]:
-        #     prep.sequential_unitary_circuit_optimization(
-        #             num_var_seq_layers, max_iterations=max_iterations, nhop=nhop)
-        #     data_var_seq[mps_type][num_var_seq_layers] = prep.var_seq_data
+        ####### variational mps preparation with sequential circicuit ansatz
+        data_var_seq[mps_type] = {}
+        for num_var_seq_layers in [2,3]:
+            prep.sequential_unitary_circuit_optimization(num_var_seq_layers, max_iterations=4)
+            data_var_seq[mps_type][num_var_seq_layers] = prep.var_seq_data
 
         # # ####### quantum circuit tensor network ansatz
         # data_qctn[mps_type] = {}
@@ -85,29 +82,27 @@ if __name__ == "__main__":
         #     data_var_lcu[mps_type][num_var_lcu_layers] = prep.var_lcu_data
 
         
-    labels = {'aklt':'AKLT, L=12', 'random':'random, L=12', 
-              'N2':'$N_2$, (STO-6G), L = 20', 'heisenberg':'HAF, L=32'}
+    labels = {'aklt':'aklt state, $L=12$', 'random':'random, $L=12$', 
+              'N2':'$N_2$, (STO-6G), $L=20$', 'heisenberg':'HAF, $L=32$'}
 
+    # for mps_type in mps_types:
+    #     num_layers = data_seq[mps_type]['it_Ds']
+    #     overlaps = data_seq[mps_type]['overlaps']
+    #     plt.plot(num_layers, (1-np.abs(np.array(overlaps))), 'o-', label=labels[mps_type])        
+    # plt.xlabel('$num\ of\ seq.\ layers$')
+    # plt.ylabel('$overlap\ with\ target\ wavefunction$')
+    # plt.legend()
+    
     
     for mps_type in mps_types:
-        num_layers = data_seq[mps_type]['it_Ds']
-        overlaps = data_seq[mps_type]['overlaps']
-        plt.plot(num_layers, (1-np.abs(np.array(overlaps))), 'o-', label=labels[mps_type])        
+        num_layers = [2,3]
+        overlaps = [-data_var_seq[mps_type][n]['tnopt'].loss_best for n in num_layers]
+        plt.plot(num_layers, (1-np.abs(np.array(overlaps))), 'o-', label=labels[mps_type])
         
+    plt.title(r'$variational\ sequential\ unitary\ ansatz$')        
     plt.ylabel('$overlap\ with\ target\ wavefunction$')
-    plt.xlabel('$num\ of\ sequential\ layers$')
+    plt.xlabel('$num\ of\ variational\ sequential\ layers$')
     plt.legend()
-    
-    
-    # # for mps_type in mps_types:
-    # #     num_layers = [2,3]
-    # #     overlaps = [-data_var_seq[mps_type][n]['tnopt'].loss_best for n in num_layers]
-    # #     plt.plot(num_layers, (1-np.abs(np.array(overlaps))), 'o-', label=labels[mps_type])
-        
-    # # plt.title(r'$variational\ sequential\ unitary\ ansatz$')        
-    # # plt.ylabel('$overlap\ with\ target\ wavefunction$')
-    # # plt.xlabel('$num\ of\ variational\ sequential\ layers$')
-    # # plt.legend()
     
     
     # # for mps_type in mps_types:

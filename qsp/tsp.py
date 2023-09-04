@@ -84,29 +84,32 @@ class MPSPreparation():
         
                
     def sequential_unitary_circuit_optimization(self, 
-                                                number_of_layers, 
-                                                n_iter, 
-                                                nhop,
+                                                num_var_seq_layers, 
+                                                max_iterations=400, 
+                                                num_hops=1,
                                                 do_compression=False, 
                                                 max_bond_dim=128, 
                                                 verbose=False):
         
         if self.phys_dim!=2:
-            print('only supports mps with physical dimesnion=2')
-            return 
+            raise ValueError('only supports mps with physical dimesnion=2')
+            
         
-        print('doing variational optimization over sequential unitaries...')
+        print('doing variational optimization over sequential unitaries '
+              f'(num_var_seq_layers={num_var_seq_layers})...')
+
         
         self.seq_data = sequential_unitary_circuit(self.target_mps, 
-                                                   number_of_layers, 
+                                                   num_var_seq_layers, 
                                                    do_compression=do_compression, 
                                                    max_bond_dim=max_bond_dim, 
                                                    verbose=verbose)
+
+        
         self.var_seq_data = sequential_unitary_circuit_optimization(
-            self.target_mps, 
-            self.seq_data['unitaries'],
-            n_iter, nhop
+            self.target_mps, self.seq_data['unitaries'], max_iterations, num_hops
             )
+        
         circ, tnopt = self.var_seq_data['circ'], self.var_seq_data['tnopt']
         
         overlap = -tnopt.loss_best
@@ -117,16 +120,21 @@ class MPSPreparation():
               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n')
         
  
-    def quantum_circuit_tensor_network_ansatz(self, depth, n_iter, nhop):
+    def quantum_circuit_tensor_network_ansatz(self, 
+                                              qctn_depth, 
+                                              max_iterations=400, 
+                                              num_hops=1):
         
         if self.phys_dim!=2:
-            print('only supports mps with physical dimesnion=2')
-            return 
+            raise ValueError('only supports mps with physical dimesnion=2')
+            
+        print('preparing mps using quantum circuit tensor network ansatz'
+              f'(qctn_depth={qctn_depth})...')
         
-        print('preparing mps using quantum circuit tensor network ansatz...')
-        self.qctn_data = quantum_circuit_tensor_network_ansatz(self.target_mps, 
-                                                               depth, 
-                                                               n_iter, nhop)
+        self.qctn_data = quantum_circuit_tensor_network_ansatz(
+            self.target_mps, qctn_depth, max_iterations, num_hops
+            )
+        
         circ, tnopt = self.qctn_data['circ'], self.qctn_data['tnopt']
         
         overlap = -tnopt.loss_best
