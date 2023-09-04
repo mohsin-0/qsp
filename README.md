@@ -73,5 +73,4 @@ prep.sequential_unitary_circuit(number_of_layers=4)
   publisher={APS}
 }
 
-
 ```

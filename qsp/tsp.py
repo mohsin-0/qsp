@@ -226,7 +226,7 @@ class MPSPreparation:
             f"overllap after variational optimization = {overlap:0.8f}{temp_str},\n"
             f"n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n"
         )
-        return
+        return self.var_seq_data
 
     def quantum_circuit_tensor_network_ansatz(
         self, qctn_depth, max_iterations=400, num_hops=1
@@ -281,7 +281,7 @@ class MPSPreparation:
             f"overllap after qctn optimization ={overlap:0.8f}{temp_str},\n"
             f"n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n"
         )
-        return
+        return self.qctn_data
 
     def lcu_unitary_circuit(self, num_lcu_layers, verbose=False):
         """The MPS is approximated by linear combination of unitaries.
@@ -342,7 +342,7 @@ class MPSPreparation:
             f"overllap after lcu. preparation = {np.abs(overlap):.8f}{temp_str}, ",
             f"n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n",
         )
-        return
+        return self.lcu_data
 
     def lcu_unitary_circuit_optimization(
         self, num_var_lcu_layers, max_iterations=500, verbose=False
@@ -461,7 +461,7 @@ class MPSPreparation:
         print(
             f"overllap after lcu optimization ({method_name}) = {np.abs(overlap):.8f}\n"
         )
-        return
+        return self.var_lcu_data
 
     def adiabatic_state_preparation(self, runtime, tau, max_bond_dim, verbose=False):
         """performs adiabatic preparation of the mps using the algorithm
