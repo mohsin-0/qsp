@@ -6,32 +6,29 @@ import scipy as sp
 from ncon import ncon
 
 
-pauli_x = [[0.+0.j, 1.+0.j],
-           [1.+0.j, 0.+0.j]]
+pauli_x = [[0.0 + 0.0j, 1.0 + 0.0j], [1.0 + 0.0j, 0.0 + 0.0j]]
 
-pauli_y = [[0.+0.j, -0.-1.j],
-           [0.+1.j,  0.+0.j]]
+pauli_y = [[0.0 + 0.0j, -0.0 - 1.0j], [0.0 + 1.0j, 0.0 + 0.0j]]
 
-pauli_z = [[1.+0.j,  0.+0.j], 
-           [0.+0.j, -1.+0.j]]
+pauli_z = [[1.0 + 0.0j, 0.0 + 0.0j], [0.0 + 0.0j, -1.0 + 0.0j]]
 
 pauli_x = np.array(pauli_x)
 pauli_y = np.array(pauli_y)
 pauli_z = np.array(pauli_z)
-I = pauli_z@pauli_z
+I = pauli_z @ pauli_z
 
 
 def make_bell_pair_mps(L, phys_dim):
     d, D = phys_dim, int(np.sqrt(phys_dim))
-    
-    bell_tensor = (np.eye(d)).reshape([D,D,d])
+
+    bell_tensor = (np.eye(d)).reshape([D, D, d])
 
     bell_tens = [bell_tensor] * L
-    bell_tens[ 0] = np.squeeze(bell_tens[ 0][0:1, :, :])
+    bell_tens[0] = np.squeeze(bell_tens[0][0:1, :, :])
     bell_tens[-1] = np.squeeze(bell_tens[-1][:, 0:1, :])
-        
+
     return bell_tens
-    
+
 
 def make_aklt_mps(L):
     s_ttl = {}
@@ -43,7 +40,7 @@ def make_aklt_mps(L):
 
     s_sqr = s_ttl["x"] @ s_ttl["x"] + s_ttl["y"] @ s_ttl["y"] + s_ttl["z"] @ s_ttl["z"]
     s_sqr = s_sqr.reshape(4, 4)
-    
+
     proj_symm = 0
     vals, vecs = sp.linalg.eigh(s_sqr)
     vecs = np.real(vecs)
@@ -57,51 +54,53 @@ def make_aklt_mps(L):
             # print(s_val, z_val)
             # utils.print_vector(vec)
             # print('\n')
-            
+
     proj_symm = proj_symm.reshape([2] * 2 + [4])
     singlet = np.sqrt(0.5) * np.array([[0.0, -1.0], [1.0, 0.0]])
-    singlet_sqrt =  sp.linalg.sqrtm(singlet)
-    
+    singlet_sqrt = sp.linalg.sqrtm(singlet)
+
     # aklt_tensor = ncon( [proj_symm, singlet], [(1, -2, -3), (-1, 1)] )
-    aklt_tensor = ncon([proj_symm, singlet_sqrt,singlet_sqrt], [(1,2,-3),(-1,1),(2,-2)])
-    
-    # aklt_tensor = np.zeros([2,2, 2,2]) 
-    # aklt_tensor[0,0, 0,0] = 1.  
-    
-    # aklt_tensor[0,1, 0,1] = 1./(2)  
-    # aklt_tensor[0,1, 1,0] = 1./(2)  
-    
+    aklt_tensor = ncon(
+        [proj_symm, singlet_sqrt, singlet_sqrt], [(1, 2, -3), (-1, 1), (2, -2)]
+    )
+
+    # aklt_tensor = np.zeros([2,2, 2,2])
+    # aklt_tensor[0,0, 0,0] = 1.
+
+    # aklt_tensor[0,1, 0,1] = 1./(2)
+    # aklt_tensor[0,1, 1,0] = 1./(2)
+
     # aklt_tensor[1,0, 0,1] = 1./(2)
     # aklt_tensor[1,0, 1,0] = 1./(2)
-    
-    # aklt_tensor[1,1, 1,1] = 1.  
+
+    # aklt_tensor[1,1, 1,1] = 1.
     # aklt_tensor = aklt_tensor.reshape((2,2,4))
-    
+
     # aklt_tensor = ncon( [aklt_tensor, singlet], [(1, -2, -3), (-1, 1)] )
 
     ########
-    isometry = np.zeros((2,2,3))
-    isometry[0,0, 0] = 1
-    
-    isometry[0,1, 1] = 1./np.sqrt(2)
-    isometry[1,0, 1] = 1./np.sqrt(2)
-    
-    isometry[1,1, 2] = 1
-    isometry = isometry.reshape(4,3)
+    isometry = np.zeros((2, 2, 3))
+    isometry[0, 0, 0] = 1
+
+    isometry[0, 1, 1] = 1.0 / np.sqrt(2)
+    isometry[1, 0, 1] = 1.0 / np.sqrt(2)
+
+    isometry[1, 1, 2] = 1
+    isometry = isometry.reshape(4, 3)
     ########
-    
+
     aklt_tens = [aklt_tensor] * L
-    
-    aklt_tens[ 0] = np.squeeze(aklt_tens[ 0][0, :, :])
+
+    aklt_tens[0] = np.squeeze(aklt_tens[0][0, :, :])
     aklt_tens[-1] = np.squeeze(aklt_tens[-1][:, 0, :])
-        
-    onsite_isometries = [isometry]*L
+
+    onsite_isometries = [isometry] * L
     return aklt_tens, onsite_isometries
-    
+
 
 def make_bell_pair_peps(Lx, Ly):
-    bell_tensor = (np.eye(16)).reshape((2,2,2,2, 16))
-    
+    bell_tensor = (np.eye(16)).reshape((2, 2, 2, 2, 16))
+
     tensor_grid, bonds = construct_tensor_grid(bell_tensor, Lx, Ly)
     return tensor_grid, bonds
 
@@ -136,9 +135,10 @@ def make_aklt_peps(Lx, Ly):
 
     proj_symm = proj_symm.reshape([2] * 4 + [16])
     singlet = np.sqrt(0.5) * np.array([[0.0, -1.0], [1.0, 0.0]])
-    
-    aklt_tensor = ncon( (proj_symm, singlet, singlet), 
-                           [(-1, -2, 3, 4, -5), (-3, 3), (-4, 4)])
+
+    aklt_tensor = ncon(
+        (proj_symm, singlet, singlet), [(-1, -2, 3, 4, -5), (-3, 3), (-4, 4)]
+    )
 
     tensor_grid, bonds = construct_tensor_grid(aklt_tensor, Lx, Ly)
     return tensor_grid, bonds
@@ -146,7 +146,7 @@ def make_aklt_peps(Lx, Ly):
 
 def construct_tensor_grid(local_tensor, Lx, Ly):
     pt2num = {(x, y): Lx * y + x for y in range(Ly) for x in range(Lx)}
-    
+
     tensor_grid = []
     bonds = set()
     for y in range(Ly):
@@ -162,23 +162,31 @@ def construct_tensor_grid(local_tensor, Lx, Ly):
             tensor = local_tensor.copy()
             bdry = []
             if x == 0:
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
-                              [(1, -2, -3, -4, -5), (1, -1)])
+                tensor = ncon(
+                    [tensor, np.array([1, 0]).reshape(2, -1)],
+                    [(1, -2, -3, -4, -5), (1, -1)],
+                )
                 bdry.append("L")
 
             if x == (Lx - 1):
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
-                              [(-1, -2, 3, -4, -5), (3, -3)])
+                tensor = ncon(
+                    [tensor, np.array([1, 0]).reshape(2, -1)],
+                    [(-1, -2, 3, -4, -5), (3, -3)],
+                )
                 bdry.append("R")
 
             if y == 0:
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
-                              [(-1, 2, -3, -4, -5), (2, -2)])
+                tensor = ncon(
+                    [tensor, np.array([1, 0]).reshape(2, -1)],
+                    [(-1, 2, -3, -4, -5), (2, -2)],
+                )
                 bdry.append("B")
 
             if y == (Ly - 1):
-                tensor = ncon([tensor, np.array([1, 0]).reshape(2, -1)],
-                              [(-1, -2, -3, 4, -5), (4, -4)])
+                tensor = ncon(
+                    [tensor, np.array([1, 0]).reshape(2, -1)],
+                    [(-1, -2, -3, 4, -5), (4, -4)],
+                )
                 bdry.append("T")
 
             tensor_row.append(tensor)  # .squeeze())
