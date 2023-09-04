@@ -52,18 +52,17 @@ class MPSPreparation():
         
         
     def sequential_unitary_circuit(self, 
-                                   number_of_layers, 
+                                   num_seq_layers, 
                                    do_compression=False, 
                                    max_bond_dim=64, 
                                    verbose=False):
         if self.phys_dim!=2:
-            print('only supports mps with physical dimesnion=2')
-            return 
-        
-        
-        print('preparing mps using sequential unitaries...')
+            raise ValueError('only supports mps with physical dimesnion=2')
+            
+        print(f'preparing mps using sequential unitaries '
+              f'(num_seq_layers={num_seq_layers})...')
         data = sequential_unitary_circuit(self.target_mps, 
-                                          number_of_layers, 
+                                          num_seq_layers, 
                                           do_compression=do_compression, 
                                           max_bond_dim=max_bond_dim, 
                                           verbose=verbose)
@@ -82,6 +81,7 @@ class MPSPreparation():
         
         print(f'overlap from static seq. preparation = {np.abs(overlap):0.8f}{temp_str},\n'
               f'n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n')
+        
                
     def sequential_unitary_circuit_optimization(self, 
                                                 number_of_layers, 
