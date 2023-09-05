@@ -31,49 +31,8 @@ prep.sequential_unitary_circuit(number_of_layers=4)
 ```
 
 ## References
-1. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\) \\
-2. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\)
+1. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), \ Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\)\
+2. [Variational power of quantum circuit tensor networks](), \ Reza Haghshenas,  Johnnie Gray, Andrew C Potter,  and Garnet Kin-Lic Chan, Phys. Rev. X 12, 011047 \(2022\)\
+3. [Preentangling Quantum Algorithms--the Density Matrix Renormalization Group-assisted Quantum Canonical Transformation](), \ Mohsin Iqbal,  David Mu{\~n}oz Ramo and Henrik Dreyer, arXiv preprint arXiv:2209.07106 \(2022\)\
+4. [Efficient adiabatic preparation of tensor network states](), Zhi-YuanWei, Daniel Malz and Ignacio J. Cirac, Phys. Rev. Research 5, L022037 \(2023\)\
 
-
-```
-@article{ran2020encoding,
-  title={Encoding of matrix product states into quantum circuits of one-and two-qubit gates},
-  author={Ran, Shi-Ju},
-  journal={Physical Review A},
-  volume={101},
-  number={3},
-  pages={032310},
-  year={2020},
-  publisher={APS}
-}
-
-@article{haghshenas2022variational,
-  title={Variational power of quantum circuit tensor networks},
-  author={Haghshenas, Reza and Gray, Johnnie and Potter, Andrew C and Chan, Garnet Kin-Lic},
-  journal={Physical Review X},
-  volume={12},
-  number={1},
-  pages={011047},
-  year={2022},
-  publisher={APS}
-}
-
-@article{iqbal2022preentangling,
-  title={Preentangling Quantum Algorithms--the Density Matrix Renormalization Group-assisted Quantum Canonical Transformation},
-  author={Iqbal, Mohsin and Ramo, David Mu{\~n}oz and Dreyer, Henrik},
-  journal={arXiv preprint arXiv:2209.07106},
-  year={2022}
-}
-
-@article{wei2023efficient,
-  title={Efficient adiabatic preparation of tensor network states},
-  author={Wei, Zhi-Yuan and Malz, Daniel and Cirac, J Ignacio},
-  journal={Physical Review Research},
-  volume={5},
-  number={2},
-  pages={L022037},
-  year={2023},
-  publisher={APS}
-}
-
-```
