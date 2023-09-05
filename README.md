@@ -11,7 +11,7 @@ pip install git+https://github.com/mohsin-0/qsp.git@main
 ```
 
 ## Tutorial
-[Usage tutorial](https://github.com/mohsin-0/qsp/blob/main/examples/state_prep_examples.ipynb) and som [Benchmarks](https://github.com/mohsin-0/qsp/blob/main/examples/benchmarks.ipynb)
+[Usage tutorial](https://github.com/mohsin-0/qsp/blob/main/examples/state_prep_examples.ipynb) and some [benchmarks](https://github.com/mohsin-0/qsp/blob/main/examples/benchmarks.ipynb)
 
 
 ## Basic Example
@@ -31,6 +31,9 @@ prep.sequential_unitary_circuit(number_of_layers=4)
 ```
 
 ## References
+ Markup : 1. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\)
+          2. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\)
+
 
 ```
 @article{ran2020encoding,
