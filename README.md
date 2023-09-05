@@ -31,8 +31,8 @@ prep.sequential_unitary_circuit(number_of_layers=4)
 ```
 
 ## References
- Markup : 1. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\)
-          2. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\)
+1. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\) \\
+2. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\)
 
 
 ```
