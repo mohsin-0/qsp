@@ -146,7 +146,7 @@ class MPSPreparation:
             f"n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n"
         )
 
-        return self.seq_data
+        return overlap, circ
 
     def sequential_unitary_circuit_optimization(
         self,
@@ -226,7 +226,7 @@ class MPSPreparation:
             f"overllap after variational optimization = {overlap:0.8f}{temp_str},\n"
             f"n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n"
         )
-        return self.var_seq_data
+        return overlap, circ
 
     def quantum_circuit_tensor_network_ansatz(
         self, qctn_depth, max_iterations=400, num_hops=1
@@ -281,7 +281,8 @@ class MPSPreparation:
             f"overllap after qctn optimization ={overlap:0.8f}{temp_str},\n"
             f"n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n"
         )
-        return self.qctn_data
+        return overlap, circ
+    
 
     def lcu_unitary_circuit(self, num_lcu_layers, verbose=False):
         """The MPS is approximated by linear combination of unitaries.
@@ -302,6 +303,12 @@ class MPSPreparation:
         """
         if self.phys_dim != 2:
             raise ValueError("only supports mps with physical dimesnion=2")
+
+            
+        k = np.log2(num_lcu_layers)
+        if (np.abs(k - int(k)) > 1e-12):
+            raise ValueError(f'required num_var_lcu_layers={num_lcu_layers} '
+                             'not a positive power of 2')
 
         print(
             f"preparing mps as linear combination of unitaries "
@@ -342,7 +349,7 @@ class MPSPreparation:
             f"overllap after lcu. preparation = {np.abs(overlap):.8f}{temp_str}, ",
             f"n_gates={circ.size()}, n_2qg={circ.num_nonlocal_gates()}\n",
         )
-        return self.lcu_data
+        return overlap, circ
 
     def lcu_unitary_circuit_optimization(
         self, num_var_lcu_layers, max_iterations=500, verbose=False
@@ -370,18 +377,14 @@ class MPSPreparation:
         if self.phys_dim != 2:
             raise ValueError("only supports mps with physical dimesnion=2")
 
-        if (
-            np.abs(np.log2(num_var_lcu_layers) - int(np.log2(num_var_lcu_layers)))
-            > 1e-12
-        ):
-            raise ValueError(
-                f"required num_var_lcu_layers={num_var_lcu_layers} not a positive power of 2"
-            )
 
-        print(
-            "doing variational optimization over linear combination of unitaries "
-            f"(num_var_lcu_layers={num_var_lcu_layers})..."
-        )
+        k = np.log2(num_var_lcu_layers)
+        if (np.abs(k - int(k)) > 1e-12):
+            raise ValueError(f'required num_var_lcu_layers={num_var_lcu_layers} '
+                             'not a positive power of 2')
+
+        print("doing variational optimization over linear combination of "
+              f"unitaries (num_var_lcu_layers={num_var_lcu_layers})...")
 
         self.var_lcu_static_data = lcu_unitary_circuit(
             self.target_mps, num_var_lcu_layers, verbose=verbose
@@ -458,10 +461,9 @@ class MPSPreparation:
         self.var_lcu_data["circ"] = circ
         self.var_lcu_data["overlap"] = overlap
 
-        print(
-            f"overllap after lcu optimization ({method_name}) = {np.abs(overlap):.8f}\n"
-        )
-        return self.var_lcu_data
+        print("overllap after lcu optimization "
+              f"({method_name}) = {np.abs(overlap):.8f}\n")
+        return overlap, circ
 
     def adiabatic_state_preparation(self, runtime, tau, max_bond_dim, verbose=False):
         """performs adiabatic preparation of the mps using the algorithm
@@ -543,8 +545,7 @@ class MPSPreparation:
             f"curr_f={curr_f:.08f}, target_fidelity={tar_f:.08f}\n"
             f"approximate n_gates={int(n_gates)}, and n_2qg={int(n_2qg)}\n"
         )
-
-        return self.adiabatic_data
+        return tar_f, n_2qg
 
 
 class PEPSPreparation:
@@ -578,10 +579,9 @@ class PEPSPreparation:
             algorithm.
         """
 
-        print(
-            "adiabatic state preparation of peps:\n"
-            f"runtime={Tmax}, tau={tau:0.04}, steps={int(Tmax/tau)}, max_bond={max_bond}"
-        )
+        print("adiabatic state preparation of peps:\n"
+            f"runtime={Tmax}, tau={tau:0.04}, steps={int(Tmax/tau)}, "
+            f"max_bond={max_bond}")
 
         # s_func = lambda t: np.sin( (np.pi/2)*np.sin( (np.pi/2)*t/Tmax )**2 )**2
         s_func = lambda t: np.sin((np.pi / 2) * t / Tmax) ** 2
