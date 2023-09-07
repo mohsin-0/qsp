@@ -31,8 +31,16 @@ prep.sequential_unitary_circuit(number_of_layers=4)
 ```
 
 ## References
-1. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](), \ Shi-Ju Ran, Phys. Rev. A 101, 032310 \(2020\)\
-2. [Variational power of quantum circuit tensor networks](), \ Reza Haghshenas,  Johnnie Gray, Andrew C Potter,  and Garnet Kin-Lic Chan, Phys. Rev. X 12, 011047 \(2022\)\
-3. [Preentangling Quantum Algorithms--the Density Matrix Renormalization Group-assisted Quantum Canonical Transformation](), \ Mohsin Iqbal,  David Mu{\~n}oz Ramo and Henrik Dreyer, arXiv preprint arXiv:2209.07106 \(2022\)\
-4. [Efficient adiabatic preparation of tensor network states](), Zhi-YuanWei, Daniel Malz and Ignacio J. Cirac, Phys. Rev. Research 5, L022037 \(2023\)\
+1. [Encoding of matrix product states into quantum circuits of one-and two-qubit gates](https://arxiv.org/abs/1908.07958),\
+   Shi-Ju Ran, Phys. Rev. A 101, 032310 (2020)
+   
+2. [Variational power of quantum circuit tensor networks](https://arxiv.org/abs/2107.01307),\
+   Reza Haghshenas, Johnnie Gray, Andrew C Potter,  and Garnet Kin-Lic Chan, Phys. Rev. X 12, 011047 (2022)
+   
+3. [Preentangling Quantum Algorithms--the Density Matrix Renormalization Group-assisted Quantum Canonical Transformation](https://arxiv.org/abs/2209.07106),\
+   Mohsin Iqbal,  David Munoz Ramo and Henrik Dreyer, arXiv preprint arXiv:2209.07106 (2022)
+   
+4. [Efficient adiabatic preparation of tensor network states](https://arxiv.org/abs/2209.01230),\
+   Zhi-Yuan Wei, Daniel Malz and Ignacio J. Cirac, Phys. Rev. Research 5, L022037 (2023)
+   
 
