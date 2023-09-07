@@ -34,65 +34,68 @@ def get_target_mps(mps_type):
 
 
 if __name__ == "__main__":
+    
+    pass
+    
     # TODO: git domain, setup file -> author, email, liscence
     # TODO: QCTN approximation of a PEPS
     # TODO:
 
+    # # #######
+    # target_mps = get_target_mps(mps_type='aklt')
+    # prep = MPSPreparation(target_mps)
+    # num_seq_layers = 6
+    # seq_data = prep.sequential_unitary_circuit(num_seq_layers)
+
     # #######
-    target_mps = get_target_mps(mps_type='aklt')
-    prep = MPSPreparation(target_mps)
-    num_seq_layers = 6
-    seq_data = prep.sequential_unitary_circuit(num_seq_layers)
+    # target_mps = get_target_mps(mps_type='aklt')
+    # prep = MPSPreparation(target_mps)
+    # num_var_seq_layers = 2
+    # var_seq_data = \
+    #     prep.sequential_unitary_circuit_optimization(num_var_seq_layers, 
+    #                                                  max_iterations=4)
 
-    #######
-    target_mps = get_target_mps(mps_type='aklt')
-    prep = MPSPreparation(target_mps)
-    num_var_seq_layers = 2
-    var_seq_data = \
-        prep.sequential_unitary_circuit_optimization(num_var_seq_layers, 
-                                                     max_iterations=4)
+    # #######
+    # target_mps = get_target_mps(mps_type='aklt')
+    # prep = MPSPreparation(target_mps)
+    # qctn_depth = 8
+    # qctn_data = prep.quantum_circuit_tensor_network_ansatz(qctn_depth, 
+    #                                                        max_iterations=4)
 
-    #######
-    target_mps = get_target_mps(mps_type='aklt')
-    prep = MPSPreparation(target_mps)
-    qctn_depth = 8
-    qctn_data = prep.quantum_circuit_tensor_network_ansatz(qctn_depth, 
-                                                           max_iterations=4)
+    # #######
+    # target_mps = get_target_mps(mps_type='N2')
+    # prep = MPSPreparation(target_mps)
+    # num_lcu_layers = 4
+    # lcu_data = prep.lcu_unitary_circuit(num_lcu_layers)
 
-    #######
-    target_mps = get_target_mps(mps_type='N2')
-    prep = MPSPreparation(target_mps)
-    num_lcu_layers = 4
-    lcu_data = prep.lcu_unitary_circuit(num_lcu_layers)
+    # ######
+    # target_mps = get_target_mps(mps_type='N2')
+    # num_var_lcu_layers = 4
+    # data_var_lcu = prep.lcu_unitary_circuit_optimization(num_var_lcu_layers, 
+    #                                                      max_iterations=4)
 
-    ######
-    target_mps = get_target_mps(mps_type='N2')
-    num_var_lcu_layers = 4
-    data_var_lcu = prep.lcu_unitary_circuit_optimization(num_var_lcu_layers, 
-                                                         max_iterations=4)
+    # ####### 1d adiabatic state preparation - random D=d=2 mps
+    # target_mps = qtn.MPS_rand_state(L=6, bond_dim=2)
+    # prep = MPSPreparation(target_mps)
+    # runtime, tau = 8, 0.04  # total runtime, trotter step size
+    # max_bond = 2
+    # adiabatic_data = prep.adiabatic_state_preparation(runtime, tau, max_bond)
 
-    ####### 1d adiabatic state preparation - random D=d=2 mps
-    target_mps = qtn.MPS_rand_state(L=6, bond_dim=2)
-    prep = MPSPreparation(target_mps)
-    runtime, tau = 8, 0.04  # total runtime, trotter step size
-    max_bond = 2
-    adiabatic_data = prep.adiabatic_state_preparation(runtime, tau, max_bond)
+    # ### 1d adiabatic state preparation - aklt
+    # tensor_array, _ = make_aklt_mps(L=6)
+    # prep = MPSPreparation(tensor_array, shape="lrp")
+    # runtime, tau = 8, 0.04  # total runtime, trotter step size
+    # max_bond = 2
+    # prep.adiabatic_state_preparation(runtime, tau, max_bond, verbose=False)
 
-    ### 1d adiabatic state preparation - aklt
-    tensor_array, _ = make_aklt_mps(L=6)
-    prep = MPSPreparation(tensor_array, shape="lrp")
-    runtime, tau = 8, 0.04  # total runtime, trotter step size
-    max_bond = 2
-    prep.adiabatic_state_preparation(runtime, tau, max_bond, verbose=False)
+    # # ## 2d adiabatic state preparation
+    # Lx, Ly = 10, 4
+    # target_grid, _ = make_aklt_peps(Lx, Ly)
+    # prep = PEPSPreparation(target_grid)
 
-    # ## 2d adiabatic state preparation
-    Lx, Ly = 10, 4
-    target_grid, _ = make_aklt_peps(Lx, Ly)
-    prep = PEPSPreparation(target_grid)
-
-    Tmax, tau = 10, 0.04
-    max_bond = 2
-    prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
+    # Tmax, tau = 10, 0.04
+    # max_bond = 2
+    # prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
 
     # plt.plot(prep.adiabatic_data['target_fidelity'].keys(),
     # prep.adiabatic_data['target_fidelity'].values(), '.-')
