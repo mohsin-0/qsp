@@ -33,7 +33,7 @@ tensor_array[ 0] = np.random.rand(bond_dim,phys_dim)  # end points of mps
 tensor_array[-1] = np.random.rand(bond_dim,phys_dim)
 prep = MPSPreparation(tensor_array, shape='lrp')
 
-prep.sequential_unitary_circuit(num_seq_layers=4)
+overlap, circ = prep.sequential_unitary_circuit(num_seq_layers=4)
 ```
 
 ## References

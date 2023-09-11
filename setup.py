@@ -10,7 +10,7 @@ requirements = [
 ]
 setup(
     name='qsp',
-    version="0.0.2",
+    version="0.0.3",
     description='implementation of different methods to prepare quantum states on quantum computer',
     long_description=long_description,
     long_description_content_type='text/markdown',
