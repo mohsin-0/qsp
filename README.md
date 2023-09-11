@@ -6,6 +6,12 @@ To use the package, you first need to specify a list of NumPy arrays that repres
 call different routines in the package to prepare the state.
 
 ## Installation
+
+```
+pip install qsp
+```
+
+One can also install the development version directly as 
 ```
 pip install git+https://github.com/mohsin-0/qsp.git@main
 ```
@@ -27,7 +33,7 @@ tensor_array[ 0] = np.random.rand(bond_dim,phys_dim)  # end points of mps
 tensor_array[-1] = np.random.rand(bond_dim,phys_dim)
 prep = MPSPreparation(tensor_array, shape='lrp')
 
-prep.sequential_unitary_circuit(number_of_layers=4)
+prep.sequential_unitary_circuit(num_seq_layers=4)
 ```
 
 ## References
