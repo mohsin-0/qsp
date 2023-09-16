@@ -10,13 +10,13 @@ requirements = [
 ]
 setup(
     name='qsp',
-    version="0.0.3",
+    version="0.0.5",
     description='implementation of different methods to prepare quantum states on quantum computer',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/mohsin-0/qsp',
     author='Mohsin Iqbal',
-    author_email="mohsin.iqbal@cambridgequantum.com",
+    author_email="mohsin.iqbal@quantinuum.com",
     license='Apache License 2.0',
     install_requires=requirements,
     python_requires='>=3.9',
