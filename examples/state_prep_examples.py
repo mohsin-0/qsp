@@ -36,10 +36,7 @@ def get_target_mps(mps_type):
 if __name__ == "__main__":
     
     pass
-    
-    # TODO: git domain, setup file -> author, email, liscence
     # TODO: QCTN approximation of a PEPS
-    # TODO:
 
     # # #######
     # target_mps = get_target_mps(mps_type='aklt')
@@ -53,14 +50,14 @@ if __name__ == "__main__":
     # num_var_seq_layers = 2
     # var_seq_data = \
     #     prep.sequential_unitary_circuit_optimization(num_var_seq_layers, 
-    #                                                  max_iterations=4)
+    #                                                   max_iterations=4)
 
     # #######
     # target_mps = get_target_mps(mps_type='aklt')
     # prep = MPSPreparation(target_mps)
     # qctn_depth = 8
     # qctn_data = prep.quantum_circuit_tensor_network_ansatz(qctn_depth, 
-    #                                                        max_iterations=4)
+    #                                                         max_iterations=4)
 
     # #######
     # target_mps = get_target_mps(mps_type='N2')
@@ -72,7 +69,7 @@ if __name__ == "__main__":
     # target_mps = get_target_mps(mps_type='N2')
     # num_var_lcu_layers = 4
     # data_var_lcu = prep.lcu_unitary_circuit_optimization(num_var_lcu_layers, 
-    #                                                      max_iterations=4)
+    #                                                       max_iterations=4)
 
     # ####### 1d adiabatic state preparation - random D=d=2 mps
     # target_mps = qtn.MPS_rand_state(L=6, bond_dim=2)
@@ -97,5 +94,5 @@ if __name__ == "__main__":
     # max_bond = 2
     # prep.adiabatic_state_preparation(Tmax, tau, max_bond, verbose=False)
 
-    # plt.plot(prep.adiabatic_data['target_fidelity'].keys(),
-    # prep.adiabatic_data['target_fidelity'].values(), '.-')
+    # # plt.plot(prep.adiabatic_data['target_fidelity'].keys(),
+    # # prep.adiabatic_data['target_fidelity'].values(), '.-')
